@@ -12,6 +12,10 @@ def process_xlsx(filepath) -> dict[str, pandas.DataFrame]:
     return pd.read_excel(filepath, sheet_name=None)
 
 
+def load_dataframe(filepath="./data/log_with_cgm.pkl") -> pandas.DataFrame:
+    return pd.read_pickle(filepath)
+
+
 def join_df(dataframes: dict[str, pandas.DataFrame]):
     log_df = dataframes["TEI_Cleaned"]
     cgm_df = dataframes["CGM_Cleaned"]
@@ -26,8 +30,7 @@ def join_df(dataframes: dict[str, pandas.DataFrame]):
         ts = row['Timestamp']
         mask = (
                 (cgm_df['UserID'] == uid) &
-                (cgm_df['NZT'] >= ts - timedelta(hours=2)) &
-                (cgm_df['NZT'] <= ts + timedelta(hours=2))
+                (cgm_df['NZT'] >= ts - timedelta(hours=2))
         )
         return cgm_df[mask]
 
@@ -42,6 +45,10 @@ if __name__ == "__main__":
     # Sex, UserID, Date, Time, Timestamp, FoodItem, Energy, Carbohydrate, Protein, Fat, Tag, Weight
     filepath = "./data/CGM_TEI_Cleaned(1).xlsx"
     file_out = "./data/log_with_cgm.pkl"
+    raw_log_file_out = "./data/raw_log.pkl"
+    raw_cgm_file_out = "./data/raw_cgm.pkl"
     dataframes = process_xlsx(filepath)
+    dataframes["TEI_Cleaned"].to_pickle(raw_log_file_out)
+    dataframes["CGM_Cleaned"].to_pickle(raw_cgm_file_out)
     df = join_df(dataframes)
     df.to_pickle(file_out)

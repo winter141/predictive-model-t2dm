@@ -9,14 +9,11 @@ from sklearn.ensemble import GradientBoostingClassifier
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, r2_score
 
+from process_data import load_dataframe
 
 X_LABELS = ["Energy", "Carbohydrate", "Protein", "Fat"]
 Y_LABEL = "auc"
 TRAIN_TEST_PROPORTION = 0.8
-
-
-def load_dataframe(filepath) -> pandas.DataFrame:
-    return pd.read_pickle(filepath)
 
 
 class FeatureLabelReducer:

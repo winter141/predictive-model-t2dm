@@ -1,3 +1,7 @@
+"""
+Sandbox file.
+
+"""
 import pandas
 
 from process_data import load_dataframe

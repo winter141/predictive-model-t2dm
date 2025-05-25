@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # print(log_df['FoodItem'].value_counts())
 
     generator = UserPDFGenerator(cgm_df, log_df, "2024-10-05", "2024-11-05", file_out)
-    generator.generate_food_specific("water")
+    generator.generate_food_specific("banana")
 
 
 

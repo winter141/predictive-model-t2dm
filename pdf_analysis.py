@@ -16,7 +16,7 @@ def finalize_and_save(fig, pdf):
 
 class UserPDFGenerator:
 
-    def __init__(self, user_cgm_df, user_log_df, start_date: str, end_date: str, file_out):
+    def __init__(self, cgm_df, log_df, start_date: str, end_date: str, file_out, UserID: str):
         """
         :param user_cgm_df:
         :param user_log_df:
@@ -24,9 +24,13 @@ class UserPDFGenerator:
         :param end_date: like yyyy/mm/dd "2024-10-08"
         :param file_out:
         """
+        self.UserID = UserID
         self.file_out = file_out
         self.start_date = start_date
         self.end_date = end_date
+
+        user_cgm_df = cgm_df[cgm_df["UserID"] == UserID].copy()
+        user_log_df = log_df[log_df["UserID"] == UserID].copy()
 
         user_cgm_df['NZT'] = pd.to_datetime(user_cgm_df['NZT'])
         user_cgm_df = user_cgm_df
@@ -49,6 +53,12 @@ class UserPDFGenerator:
         self.file_out += "_food_specific"
         with PdfPages(f"{self.file_out}.pdf") as pdf:
             self._plt_food_specific(food, pdf)
+        print(f"PDF report '{self.file_out}' generated successfully!")
+
+    def generate_food_consistency(self, food: str):
+        self.file_out += "_food_consistency"
+        with PdfPages(f"{self.file_out}.pdf") as pdf:
+            self._plt_food_consistency(food, pdf)
         print(f"PDF report '{self.file_out}' generated successfully!")
 
     def _plt_cgm_by_date(self, selected_date, pdf):
@@ -74,11 +84,28 @@ class UserPDFGenerator:
                 cgm_window, log_window = self._cgm_log_df_in_timeframe(2, 2, timestamp)
                 self._plt_cgm_logs(cgm_window, log_window, f"{timestamp}: {selected_food}", pdf)
 
+
         pass
 
+    def _plt_food_consistency(self, selected_food: str, pdf):
+        fig, ax = plt.subplots(figsize=(12, 8))
+
+        for _, log in self.user_log_df.iterrows():
+            if log["FoodItem"] == selected_food:
+                timestamp = log["Timestamp"]
+                cgm_window, log_window = self._cgm_log_df_in_timeframe(1, 2, timestamp)
+                ax.plot(cgm_window["Time_num"] - log["Time_num"], cgm_window["value"], 'o--', label=f"{timestamp}")
+        ax.axvline(x=0, linestyle='--', label=f"{selected_food} logged")
+        ax.set_title(f"{selected_food} log consistency for {self.UserID}")
+        ax.set_xlabel("Minutes since Food Log")
+        ax.set_ylabel("Glucose Level (mmol/L)")
+        ax.legend()
+        finalize_and_save(fig, pdf)
+        plt.close(fig)
 
     def _plt_cgm_logs(self, cgm_window, log_window, title, pdf):
         fig, ax = plt.subplots(figsize=(12, 8))
+
         ax.plot(cgm_window["Time_num"], cgm_window["value"], 'o--')
 
         # Use the numeric positions for ticks, but label with corresponding HH:MM strings
@@ -90,9 +117,11 @@ class UserPDFGenerator:
         for _, log in log_window.iterrows():
             ax.plot([log["Time_num"] for _ in range(2)], [5, 22], '-', label=log["FoodItem"])
 
+
         ax.legend()
         ax.set_title(title)
         finalize_and_save(fig, pdf)
+
 
     def _cgm_log_df_in_timeframe(self, hours_before: float, hours_after: float, timestamp):
         """
@@ -121,14 +150,12 @@ if __name__ == "__main__":
     cgm_df = load_dataframe("./data/raw_cgm.pkl")
     log_df = load_dataframe("./data/raw_log.pkl")
 
-    cgm_df = cgm_df[cgm_df["UserID"] == UserID]
-    log_df = log_df[log_df["UserID"] == UserID]
 
     # FoodItem frequency
     #print(log_df['FoodItem'].value_counts())
 
-    generator = UserPDFGenerator(cgm_df, log_df, "2024-10-05", "2024-11-05", file_out)
-    generator.generate_food_specific("meat pie")
+    generator = UserPDFGenerator(cgm_df, log_df, "2024-10-05", "2024-11-05", file_out, UserID)
+    generator.generate_food_consistency("meat pie")
     # generator.generate_cgm_logs()
 
 

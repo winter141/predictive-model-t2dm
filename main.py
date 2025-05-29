@@ -5,7 +5,7 @@ Index(['Sex', 'UserID', 'Date', 'Time', 'Timestamp', 'FoodItem', 'Energy',
 import numpy as np
 import pandas
 import pandas as pd
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import GradientBoostingRegressor
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, r2_score
 import matplotlib.pyplot as plt
@@ -51,7 +51,6 @@ class FeatureLabelReducer:
 
     def reduce(self):
         self.df["auc"] = self.df["cgm_window"].apply(self.reduce_cgm_window_to_area)
-        print(self.df["auc"])
 
         return self.df
 
@@ -78,16 +77,24 @@ def split_train_test(x_values, y_values, proportion=TRAIN_TEST_PROPORTION) -> tu
     x_values = np.where(np.isinf(x_values), np.nan, x_values)
     y_values = np.where(np.isinf(y_values), np.nan, y_values)
 
+    valid_mask = ~np.isnan(x_values).any(axis=1)
+
+    x_values = x_values[valid_mask]
+    y_values = y_values[valid_mask]
+
     n = len(y_values)
     np.random.shuffle(x_values)
     np.random.shuffle(y_values)
-
     i = int(n*proportion)
     return x_values[:i], y_values[:i], x_values[i:], y_values[i:]
 
 
 def gradient_boosting(x_train, y_train):
-    model = GradientBoostingClassifier(n_estimators=200, learning_rate=0.05, max_depth=5)
+    model = GradientBoostingRegressor(
+        n_estimators=1_000,
+        learning_rate=0.05,
+        max_depth=8
+    )
     return model.fit(x_train, y_train)
 
 
@@ -140,17 +147,24 @@ if __name__ == "__main__":
     filepath = "./data/log_with_cgm.pkl"
     df = load_dataframe(filepath)
 
-    print("--------------------------")
+    # ----------------------------------- #
 
     reducer = FeatureLabelReducer(df)
     x, y = reducer.get_x_y_data()
     x_train, y_train, x_test, y_test = split_train_test(x, y)
 
-
     # MODEL
     XGBoost_model = xgboost(x_train, y_train)
-    plt_model_results(XGBoost_model, x_test, y_test)
+    GradientBoost_model = gradient_boosting(x_train, y_train)
+
+    plt_model_results(GradientBoost_model, x_test, y_test)
+    # R_value 0.03724978155568783, p_value: 0.3070168799836446
+
+    # plt_model_results(XGBoost_model, x_test, y_test)
     # R_value 0.03276457510200377, p_value: 0.3686363759122124
+
+
+    # CREATE LOTS OF GRAPHS AND PDT
 
 
 

@@ -8,12 +8,16 @@ import pandas as pd
 from sklearn.ensemble import GradientBoostingClassifier
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, r2_score
+import matplotlib.pyplot as plt
+from scipy.stats import pearsonr
+
 
 from process_data import load_dataframe
 
 X_LABELS = ["Energy", "Carbohydrate", "Protein", "Fat"]
 Y_LABEL = "auc"
 TRAIN_TEST_PROPORTION = 0.8
+MIN_CGM_READINGS = 20  # Minimum cgm readings to qualify food for model
 
 
 class FeatureLabelReducer:
@@ -33,15 +37,21 @@ class FeatureLabelReducer:
         :param cgm_df:
         :return:
         """
+        if len(cgm_df) < MIN_CGM_READINGS:
+            return np.nan
         cgm_df['NZT'] = pd.to_datetime(cgm_df['NZT'])
         cgm_df = cgm_df.sort_values('NZT')
 
-        auc = (cgm_df['value'].rolling(2).mean() * cgm_df['NZT'].diff().dt.total_seconds()).sum()
+        # TODO Update this
+        baseline = cgm_df.iloc[0]["value"]
+
+        auc = ((cgm_df['value'].rolling(2).mean() - baseline) * cgm_df['NZT'].diff().dt.total_seconds() / 60).sum()
 
         return auc
 
     def reduce(self):
         self.df["auc"] = self.df["cgm_window"].apply(self.reduce_cgm_window_to_area)
+        print(self.df["auc"])
 
         return self.df
 
@@ -50,6 +60,9 @@ class FeatureLabelReducer:
             x_labels = X_LABELS
 
         reduced = self.reduce()
+
+        # Remove points with iAUC of nan
+        reduced = reduced[reduced["auc"].notna()]
 
         x_values = reduced[x_labels].values
         y_values = reduced[y_label].values
@@ -79,8 +92,11 @@ def gradient_boosting(x_train, y_train):
 
 
 def xgboost(x_train, y_train):
-    model = xgb.XGBRegressor(n_estimators=200, learning_rate=0.05, max_depth=5)
-
+    model = xgb.XGBRegressor(
+        n_estimators=1_000,
+        max_depth=8,
+        learning_rate=0.05,
+    )
     return model.fit(x_train, y_train)
 
 
@@ -94,6 +110,24 @@ def print_model_results(model: xgb.XGBRegressor, x_test, y_test):
     # print(accuracy(model.predict(x_test), y_test))
 
 
+def plt_model_results(model, x_test, y_test):
+    preds = model.predict(x_test)
+
+    min_val = min(min(preds), min(y_test))
+    max_val = max(max(preds), max(y_test))
+
+    r_value, p_value = pearsonr(preds, y_test)
+    print(f"R_value {r_value}, p_value: {p_value}")
+
+    plt.plot(preds, y_test, 'o', ms=3)
+    plt.plot([min_val, max_val], [min_val, max_val], 'r--')  # red dashed y=x line
+    plt.xlim(min_val, max_val)
+    plt.ylim(min_val, max_val)
+    plt.xlabel("Predicted PPGR")
+    plt.ylabel("Measured PPGR")
+
+    plt.show()
+
 def accuracy(preds, actual):
     """ TODO predict regression accuracy, maybe MAE, R^2"""
     pass
@@ -101,10 +135,13 @@ def accuracy(preds, actual):
     # return correct / len(preds)
 
 
+
 if __name__ == "__main__":
     filepath = "./data/log_with_cgm.pkl"
     df = load_dataframe(filepath)
-    cgm_window_ex = df.loc[0, 'cgm_window']
+
+    print("--------------------------")
+
     reducer = FeatureLabelReducer(df)
     x, y = reducer.get_x_y_data()
     x_train, y_train, x_test, y_test = split_train_test(x, y)
@@ -112,7 +149,8 @@ if __name__ == "__main__":
 
     # MODEL
     XGBoost_model = xgboost(x_train, y_train)
-    print_model_results(XGBoost_model, x_test, y_test)
+    plt_model_results(XGBoost_model, x_test, y_test)
+    # R_value 0.03276457510200377, p_value: 0.3686363759122124
 
 
 

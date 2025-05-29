@@ -26,11 +26,15 @@ def join_df(dataframes: dict[str, pandas.DataFrame]):
 
     # Function to find matching CGM rows for each log entry
     def get_cgm_window(row):
+        """
+        Find cgm window within 2 HOURS after eating
+        """
         uid = row['UserID']
         ts = row['Timestamp']
         mask = (
                 (cgm_df['UserID'] == uid) &
-                (cgm_df['NZT'] >= ts - timedelta(hours=2))
+                (cgm_df['NZT'] >= ts) &
+                (cgm_df['NZT'] <= (ts + timedelta(hours=2)))
         )
         return cgm_df[mask]
 

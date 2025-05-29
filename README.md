@@ -140,7 +140,11 @@ goodness_score = (
     - 0.2 * duration_above_140
     - 0.1 * time_to_peak
 )
+```
 
+# TODO
+- Create PDP Plots
+- Calculate new iAUC, which considers baseline
 
-
-
+The baseline should probably be the closet reading BEFORE not AFTER.
+Need to change this, but it shouldn't really make a big difference.

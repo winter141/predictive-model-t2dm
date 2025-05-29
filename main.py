@@ -107,17 +107,7 @@ def xgboost(x_train, y_train):
     return model.fit(x_train, y_train)
 
 
-def print_model_results(model: xgb.XGBRegressor, x_test, y_test):
-    predictions = model.predict(x_test)
-
-    # Print regression metrics
-    print("Mean Absolute Error:", mean_absolute_error(y_test, predictions))
-    print("R² Score:", r2_score(y_test, predictions))
-    # print([f"{max(p):.2f}" for p in predictions])
-    # print(accuracy(model.predict(x_test), y_test))
-
-
-def plt_model_results(model, x_test, y_test):
+def plt_model_results(model, x_test, y_test, model_name: str):
     preds = model.predict(x_test)
 
     min_val = min(min(preds), min(y_test))
@@ -132,6 +122,8 @@ def plt_model_results(model, x_test, y_test):
     plt.ylim(min_val, max_val)
     plt.xlabel("Predicted PPGR")
     plt.ylabel("Measured PPGR")
+
+    plt.title(f"{model_name} R={r_value:.3f} p-value={p_value:.3f}")
 
     plt.show()
 
@@ -157,10 +149,10 @@ if __name__ == "__main__":
     XGBoost_model = xgboost(x_train, y_train)
     GradientBoost_model = gradient_boosting(x_train, y_train)
 
-    plt_model_results(GradientBoost_model, x_test, y_test)
+    plt_model_results(GradientBoost_model, x_test, y_test, "Gradient Boosting Only estimators: 1000, learning rate: 0.05, max depth: 8")
     # R_value 0.03724978155568783, p_value: 0.3070168799836446
 
-    # plt_model_results(XGBoost_model, x_test, y_test)
+    plt_model_results(XGBoost_model, x_test, y_test, "XGBoost estimators: 1000, learning rate: 0.05, max depth: 8")
     # R_value 0.03276457510200377, p_value: 0.3686363759122124
 
 

@@ -1,11 +1,13 @@
 """
 Create pdf showing CGM readings and logged food for a particular user.
 """
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from process_data import load_dataframe
 import pandas as pd
 from datetime import timedelta
+from main import FeatureLabelReducer
 
 
 def finalize_and_save(fig, pdf):
@@ -94,10 +96,14 @@ class UserPDFGenerator:
             if log["FoodItem"] == selected_food:
                 timestamp = log["Timestamp"]
                 cgm_window, log_window = self._cgm_log_df_in_timeframe(1, 2, timestamp)
-                ax.plot(cgm_window["Time_num"] - log["Time_num"], cgm_window["value"], 'o--', label=f"{timestamp}")
+                ppgr_window, _ = self._cgm_log_df_in_timeframe(0, 2, timestamp)
+                iAUC = FeatureLabelReducer.reduce_cgm_window_to_area(ppgr_window.copy())
+                if not np.isnan(iAUC):
+                    ax.plot(cgm_window["Time_num"] - log["Time_num"], cgm_window["value"], 'o--', label=f"{timestamp} iAUC: {iAUC:.0f} mmol/L")
+
         ax.axvline(x=0, linestyle='--', label=f"{selected_food} logged")
         ax.set_title(f"{selected_food} log consistency for {self.UserID}")
-        ax.set_xlabel("Minutes since Food Log")
+        ax.set_xlabel("Minutes Since Food Log")
         ax.set_ylabel("Glucose Level (mmol/L)")
         ax.legend()
         finalize_and_save(fig, pdf)

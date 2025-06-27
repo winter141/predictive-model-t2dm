@@ -1,13 +1,15 @@
 """
 Create pdf showing CGM readings and logged food for a particular user.
 """
+from typing import Union
+
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from process_data import load_dataframe
 import pandas as pd
 from datetime import timedelta
-from main import FeatureLabelReducer
+from process_data import FeatureLabelReducer
 
 
 def finalize_and_save(fig, pdf):
@@ -18,7 +20,7 @@ def finalize_and_save(fig, pdf):
 
 class UserPDFGenerator:
 
-    def __init__(self, cgm_df, log_df, start_date: str, end_date: str, file_out, UserID: str):
+    def __init__(self, static_user, log_df, cgm_df, start_date: str, end_date: str, file_out, UserID: Union[str, int], dynamic_user=None, food_name="FoodItem"):
         """
         :param user_cgm_df:
         :param user_log_df:
@@ -30,13 +32,15 @@ class UserPDFGenerator:
         self.file_out = file_out
         self.start_date = start_date
         self.end_date = end_date
+        self.food_name = food_name
+
 
         user_cgm_df = cgm_df[cgm_df["UserID"] == UserID].copy()
         user_log_df = log_df[log_df["UserID"] == UserID].copy()
 
-        user_cgm_df['NZT'] = pd.to_datetime(user_cgm_df['NZT'])
+        user_cgm_df['Timestamp'] = pd.to_datetime(user_cgm_df['Timestamp'])
         user_cgm_df = user_cgm_df
-        user_cgm_df['Time_num'] = user_cgm_df['NZT'].dt.hour * 60 + user_cgm_df['NZT'].dt.minute
+        user_cgm_df['Time_num'] = user_cgm_df['Timestamp'].dt.hour * 60 + user_cgm_df['Timestamp'].dt.minute
         self.user_cgm_df = user_cgm_df
 
         user_log_df['Timestamp'] = pd.to_datetime(user_log_df['Timestamp'])
@@ -64,7 +68,7 @@ class UserPDFGenerator:
         print(f"PDF report '{self.file_out}' generated successfully!")
 
     def _plt_cgm_by_date(self, selected_date, pdf):
-        date_filtered_cgm = self.user_cgm_df[self.user_cgm_df['NZT'].dt.date == pd.to_datetime(selected_date).date()].copy()
+        date_filtered_cgm = self.user_cgm_df[self.user_cgm_df['Timestamp'].dt.date == pd.to_datetime(selected_date).date()].copy()
 
         # Add vertical lines for logs
         date_filtered_logs = self.user_log_df[self.user_log_df['Timestamp'].dt.date == pd.to_datetime(selected_date).date()].copy()
@@ -81,7 +85,7 @@ class UserPDFGenerator:
         :return:
         """
         for _, log in self.user_log_df.iterrows():
-            if log["FoodItem"] == selected_food:
+            if log[self.food_name] == selected_food:
                 timestamp = log["Timestamp"]
                 cgm_window, log_window = self._cgm_log_df_in_timeframe(2, 2, timestamp)
                 self._plt_cgm_logs(cgm_window, log_window, f"{timestamp}: {selected_food}", pdf)
@@ -93,13 +97,13 @@ class UserPDFGenerator:
         fig, ax = plt.subplots(figsize=(12, 8))
 
         for _, log in self.user_log_df.iterrows():
-            if log["FoodItem"] == selected_food:
+            if log[self.food_name] == selected_food:
                 timestamp = log["Timestamp"]
                 cgm_window, log_window = self._cgm_log_df_in_timeframe(1, 2, timestamp)
                 ppgr_window, _ = self._cgm_log_df_in_timeframe(0, 2, timestamp)
                 iAUC = FeatureLabelReducer.reduce_cgm_window_to_area(ppgr_window.copy())
                 if not np.isnan(iAUC):
-                    ax.plot(cgm_window["Time_num"] - log["Time_num"], cgm_window["value"], 'o--', label=f"{timestamp} iAUC: {iAUC:.0f} mmol/L")
+                    ax.plot(cgm_window["Time_num"] - log["Time_num"], cgm_window["reading"], 'o--', label=f"{timestamp} iAUC: {iAUC:.0f} mmol/L")
 
         ax.axvline(x=0, linestyle='--', label=f"{selected_food} logged")
         ax.set_title(f"{selected_food} log consistency for {self.UserID}")
@@ -112,7 +116,7 @@ class UserPDFGenerator:
     def _plt_cgm_logs(self, cgm_window, log_window, title, pdf):
         fig, ax = plt.subplots(figsize=(12, 8))
 
-        ax.plot(cgm_window["Time_num"], cgm_window["value"], 'o--')
+        ax.plot(cgm_window["Time_num"], cgm_window["reading"], 'o--')
 
         # Use the numeric positions for ticks, but label with corresponding HH:MM strings
         hours = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
@@ -121,7 +125,7 @@ class UserPDFGenerator:
         ax.set_xticks(ticks=ticks, labels=labels)
 
         for _, log in log_window.iterrows():
-            ax.plot([log["Time_num"] for _ in range(2)], [5, 22], '-', label=log["FoodItem"])
+            ax.plot([log["Time_num"] for _ in range(2)], [5, 130], '-', label=log[self.food_name])
 
 
         ax.legend()
@@ -136,8 +140,8 @@ class UserPDFGenerator:
             - Log Dataframe
         """
         cgm_mask = (
-                (self.user_cgm_df['NZT'] >= timestamp - timedelta(hours=hours_before)) &
-                (self.user_cgm_df['NZT'] <= timestamp + timedelta(hours=hours_after))
+                (self.user_cgm_df['Timestamp'] >= timestamp - timedelta(hours=hours_before)) &
+                (self.user_cgm_df['Timestamp'] <= timestamp + timedelta(hours=hours_after))
         )
         cgm_window = self.user_cgm_df[cgm_mask]
 
@@ -150,19 +154,27 @@ class UserPDFGenerator:
 
 
 if __name__ == "__main__":
-    UserID = "AE22VM"
-    file_out = f"./results/{UserID}"
+    UserID = 1
+    file_out = f"./results/CGMacros/{UserID}"
 
-    cgm_df = load_dataframe("./data/raw_cgm.pkl")
-    log_df = load_dataframe("./data/raw_log.pkl")
+    # Old Dataset
+    # cgm_df = load_dataframe("data/old/pickle/cgm.pkl")
+    # log_df = load_dataframe("data/old/pickle/log.pkl")
+    # static_user = load_dataframe("data/old/pickle/log.pkl")
 
+
+    # New Dataset
+    cgm_df = load_dataframe("./data/CGMacros/pickle/cgm.pkl")
+    log_df = load_dataframe("./data/CGMacros/pickle/log.pkl")
+    static_user = load_dataframe("./data/CGMacros/pickle/static_user.pkl")
+    dynamic_user = load_dataframe("./data/CGMacros/pickle/dynamic_user.pkl")
 
     # FoodItem frequency
     #print(log_df['FoodItem'].value_counts())
 
-    generator = UserPDFGenerator(cgm_df, log_df, "2024-10-05", "2024-11-05", file_out, UserID)
-    generator.generate_food_consistency("meat pie")
-    # generator.generate_cgm_logs()
+    generator = UserPDFGenerator(static_user, log_df, cgm_df, "2020-05-01", "2020-05-11", file_out, UserID, food_name="Meal Type")
+    # generator.generate_food_consistency("Dinner")
+    generator.generate_cgm_logs()
 
 
 

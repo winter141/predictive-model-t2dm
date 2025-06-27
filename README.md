@@ -1,3 +1,73 @@
+***Currently this file is just a collection of various notes.**
+# Dataset
+Remember to follow citing instructions:
+https://physionet.org/content/cgmacros/1.0.0/
+(Jan, 28, 2025)
+
+Contains data from 45 participants (15 healthy adults, 16 with pre-diabetes, 14 with T2DM)
+for 10 consecutive days (with some structured meals/direction).
+
+Dates for CGM recordings and food photographs have been time shifted by +/- N days (365<N<720).
+
+## Data Description 
+45 participants, 10 days.
+
+**45 CSV files (1 per participant): cgm#.csv**
+
+Structure:
+- One row per minute interval
+- One column per variable
+- First row contains headers
+
+Variables:
+- CGM readings (Abbot Freestyle Libre Pro, Dexcom G6 Pro)
+- Fitness tracker data:
+  - heart rate
+  - calories burned
+  - METs (metabolic equivalents of task)
+- Meal-related info
+  - Energy (total calories)
+  - Carbohydrates
+  - Protein
+  - Fat
+  - Fiber
+  - Meal type (breakfast, lunch, dinner)
+  - Image path (not needed)
+
+**Demographics and Biometrics: bio.csv**
+
+Structure:
+- One row per participant
+- Collected on Day 1 of the study
+
+Variables:
+- Demographics
+  - Age
+  - Gender
+  - Ethnicity
+- Anthropometric
+  - Height
+  - Weight
+  - BMI
+- Blood Analytics
+  - Lots but not allowed for this project
+
+**Microbiome: microbiome.csv**
+
+Lots but not allowed for this project
+
+**Gut Health: gut_health_test.csv**
+
+Lots but not allowed for this project
+
+## Usage Notes
+- Already contains a script that builds an XGBoost model to predict iAUC
+
+## Interesting points from this dataset 
+- Estimating diet can prevent 1 of every 5 deaths worldwide
+- Sensors in smartwatches contain embedded acceleromters that track hand-to-mouth gestures
+- They do the inverse of Zeevi (Landmark paper) to estimate the macronutrient composition using PPGR - tracking diet with CGMs only
+
 # Version 1
 
 ## Data
@@ -53,7 +123,7 @@ Look at digestible carbohydrates which equals: total_carb - fiber
 
 Rather than iAUC, we could look at the max, rate of change, etc.
 
-Fiber slows down absorbtion of glucose
+Fiber slows down absorption of glucose
 
 
 Insulin helps sugar move from your blood into your cells.
@@ -71,7 +141,7 @@ Complex
 1. Drink sugar drink
 2. Measure AUC for 2 hours
 3. Wait
-4. Eat Food
+4. Eat Food0
 5. Measure AUC for 2 hours
 6. Return: (Food_AUC / SugarDrink_AUC) * 100
 
@@ -121,26 +191,13 @@ To develop a machine learning model that predicts the glycemic impact—or "good
 
 ### Alternatives Considered:
 
-| Metric | Description |
-|--------|-------------|
-| iAUC (0–120 min) | Area under the curve above baseline |
-| Peak Glucose | Maximum glucose level post-meal |
-| Delta Glucose | Peak minus baseline |
+| Metric               | Description                                            |
+|----------------------|--------------------------------------------------------|
+| iAUC (0–120 min)     | Area under the curve above baseline                    |
+| Peak Glucose         | Maximum glucose level post-meal                        |
+| Delta Glucose        | Peak minus baseline                                    |
 | Duration > threshold | Time glucose spends above a set level (e.g. 140 mg/dL) |
-| Slope | Speed of glucose increase |
-
-### Custom Goodness Score
-
-A weighted composite metric is used as the target:
-
-```python
-goodness_score = (
-    -0.4 * iAUC_120
-    - 0.3 * (peak_glucose - baseline)
-    - 0.2 * duration_above_140
-    - 0.1 * time_to_peak
-)
-```
+| Slope                | Speed of glucose increase                              |
 
 # TODO
 - Create PDP Plots

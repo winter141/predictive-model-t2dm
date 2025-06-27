@@ -97,7 +97,7 @@ if __name__ == "__main__":
     y = np.load("data/CGMacros/feature_label/y.npy", allow_pickle=True)
     feature_names = np.load("data/CGMacros/feature_label/feature_names.npy", allow_pickle=True)
 
-    title = "basic_log_with_personal_info"
+    title = "macro_and_fiber_only"
     create_model_summary(x,
                          y,
                          feature_names,

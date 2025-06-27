@@ -4,7 +4,7 @@
 
 **Features:** BMI, Body weight, Height, Energy, Carbohydrate, Protein, Fat, Fiber, Sex_F, Sex_M, Self-identity_African American, Self-identity_Black, African American, Self-identity_Hispanic/Latino, Self-identity_White
 
-**R (100 iterations):** Mean 0.624, Std 0.043
+**R (100 iterations):** Mean 0.623, Std 0.051
 ## SHAP Analysis ##
 
 SHAP Analysis Plot in: results/CGMacros/SHAP_PDP/basic_log_with_personal_info_shap.png

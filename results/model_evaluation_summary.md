@@ -21,4 +21,4 @@
 ### Model Evaluation Summary
 **CGMacros**
 - Just food macro and fiber, got a R score of 0.364
-- Adding personal info (from bio), this increased to 0.624
+- Adding personal info (from bio), this increased to 0.623

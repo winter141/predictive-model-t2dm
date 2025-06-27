@@ -72,10 +72,11 @@ def SHAP_analysis(x_test, model, feature_names, shap_out: Union[str, None] = Non
     shap_values = explainer(x_test)
 
     plt.title("SHAP Summary Plot")
-    shap.summary_plot(shap_values, features=x_test, feature_names=feature_names)
+    shap.summary_plot(shap_values, features=x_test, feature_names=feature_names, show=False)
     if shap_out is not None:
         plt.savefig(shap_out, bbox_inches='tight')
-        plt.close()
+    plt.show()
+    plt.close()
     # shap.dependence_plot("FeatureA", shap_values, X, interaction_index="auto")
 
 
@@ -89,10 +90,10 @@ def PDP_analysis(model, x_test, feature_names, pdp_out):
         feature_names=feature_names,
         ax=ax,
     )
-    plt.show()
     if pdp_out is not None:
         plt.savefig(pdp_out, bbox_inches='tight')
-        plt.close()
+    plt.show()
+    plt.close()
 
 
 def get_new_preds(x: list, y: list, model_type: ModelType = ModelType.XGBOOST):

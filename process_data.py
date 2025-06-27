@@ -8,7 +8,7 @@ import pandas as pd
 
 MMOL_TO_MGDL = 18
 X_LABELS: dict = {
-    "static_user": ["Sex", "BMI", "Body weight", "Height", "Self-identity"],
+    # "static_user": ["Sex", "BMI", "Body weight", "Height", "Self-identity"],
     # "dynamic_user": ["HR", "Calories (Activity)", "Mets"],
     "log": ["Energy", "Carbohydrate", "Protein", "Fat", "Fiber"],
 }

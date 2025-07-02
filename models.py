@@ -83,13 +83,15 @@ def SHAP_analysis(x_test, model, feature_names, shap_out: Union[str, None] = Non
 def PDP_analysis(model, x_test, feature_names, pdp_out):
     fig, ax = plt.subplots(figsize=(15, 10))
     ax.set_title("Partial Dependence Plots")
-    PartialDependenceDisplay.from_estimator(
+    display = PartialDependenceDisplay.from_estimator(
         estimator=model,
         X=x_test,
         features=range(len(feature_names)),
         feature_names=feature_names,
         ax=ax,
     )
+    display.figure_.subplots_adjust(hspace=0.5)
+
     if pdp_out is not None:
         plt.savefig(pdp_out, bbox_inches='tight')
     plt.show()

@@ -8,9 +8,12 @@ import pandas as pd
 
 MMOL_TO_MGDL = 18
 X_LABELS: dict = {
-    # "static_user": ["Sex", "BMI", "Body weight", "Height", "Self-identity"],
+    "static_user": ["Sex", "BMI", "Body weight", "Height", "Self-identity"],
     # "dynamic_user": ["HR", "Calories (Activity)", "Mets"],
     "log": ["Energy", "Carbohydrate", "Protein", "Fat", "Fiber"],
+    # Engineered Features
+    "temporal_cgm": ["cgm_p30", "cgm_p60", "cgm_p120"],
+    "temporal_food": ["meal_hour", "time_since_last_meal"]
 }
 Y_LABEL = "auc"
 MIN_CGM_READINGS = 20  # Minimum cgm readings to qualify food for model
@@ -86,6 +89,7 @@ class CGMacrosData(DataABC):
             log_df.rename(columns={'Calories': 'Energy', "Carbs": "Carbohydrate", "Libre GL": "reading"}, inplace=True)
             log_df["reading"] /= MMOL_TO_MGDL
         self.bio_df.rename(columns={'subject': 'UserID', 'Gender': 'Sex'}, inplace=True)
+        self.bio_df['Sex'] = self.bio_df['Sex'].map({'M': 1, 'F': 0})
 
     def pickle(self):
         self.bio_df.rename(columns={'subject': 'UserID'}, inplace=True)
@@ -137,11 +141,11 @@ class FeatureLabelReducer:
 
         self.full_df = None
 
-    def reduce_cgm_window_to_area(self, row):
+    def reduce_cgm_window_to_area(self, row, hours):
         """
         Compute iAUC by summing only positive areas above baseline.
         """
-        time_window = pd.Timedelta(hours=2)
+        time_window = pd.Timedelta(hours=hours)
         reduced_cgm = self.cgm_df[
             (self.cgm_df["UserID"] == row["UserID"]) &
             (self.cgm_df["Timestamp"] >= row["Timestamp"]) &
@@ -163,8 +167,70 @@ class FeatureLabelReducer:
     def join_all(self):
         self.full_df = self.static_user_df.merge(self.log_df, on="UserID", how="left")
 
-        self.full_df["auc"] = self.full_df.apply(self.reduce_cgm_window_to_area, axis=1)
+        self.full_df["auc"] = self.full_df.apply(lambda row: self.reduce_cgm_window_to_area(row, 2), axis=1)
+
+        # Add temporal (engineered) features
+        self.full_df["meal_hour"] = self.full_df['Timestamp'].dt.hour
+        for label, previous_hours in [("cgm_p30", 0.5), ("cgm_p60", 1), ("cgm_p120", 2)]:
+            self.full_df[label] = (
+                self.full_df.apply(
+                    lambda row: self._cgm_reading(row, previous_hours),
+                    axis=1)
+            )
+
+        def apply_cgm_current(row):
+            matching = self.cgm_df[
+                (self.cgm_df["Timestamp"] == row["Timestamp"]) &
+                (self.cgm_df["UserID"] == row["UserID"])
+            ].copy()
+            if not matching.empty:
+                return matching["reading"].iloc[0]
+            return None
+
+        self.full_df["cgm_current"] = self.full_df.apply(apply_cgm_current, axis=1)
+
+        self.full_df["time_since_last_meal"] = self.full_df.apply(self._time_since_last_meal, axis=1)
         return self.full_df
+
+    def _time_since_last_meal(self, row):
+        timestamp = row["Timestamp"]
+        user = row["UserID"]
+
+        # Log dataframe is in order, so we can make use of that...
+        earlier_logs = self.log_df[
+            (user == self.log_df["UserID"]) &
+            (self.log_df["Timestamp"] < timestamp)
+            ]
+
+        if earlier_logs.empty:
+            return None
+
+        last_meal_time = earlier_logs["Timestamp"].max()
+        time_diff = (timestamp - last_meal_time).total_seconds() / 60
+        return time_diff
+
+    def _cgm_reading(self, row, previous_hours, max_tolerance_minutes=10):
+        timestamp = row["Timestamp"]
+        user = row["UserID"]
+
+        target_time = timestamp - pd.Timedelta(hours=previous_hours)
+
+        user_cgm = self.cgm_df[
+            (self.cgm_df["UserID"] == user) &
+            (self.cgm_df["Timestamp"] < timestamp)
+            ].copy()
+
+        if user_cgm.empty:
+            return None
+
+        user_cgm["time_diff"] = (user_cgm["Timestamp"] - target_time).abs()
+        closest_row = user_cgm.loc[user_cgm["time_diff"].idxmin()]
+
+        # Check if it's within the tolerance
+        if closest_row["time_diff"].total_seconds() / 60 <= max_tolerance_minutes:
+            return closest_row["reading"]
+        return None
+
 
     def get_x_y_data(self, x_labels_dict=None, y_label=Y_LABEL):
         if x_labels_dict is None:
@@ -193,9 +259,9 @@ if __name__ == "__main__":
     for pkl in ["cgm", "dynamic_user", "log", "static_user"]:
         df_dict[pkl] = load_dataframe(base_file_path + pkl + ".pkl")
     # ----------------------------------- #
-
     reducer = FeatureLabelReducer(df_dict)
     feature_names, x, y = reducer.get_x_y_data()
+
     np.save("data/CGMacros/feature_label/feature_names.npy", feature_names)
     np.save("data/CGMacros/feature_label/x.npy", x)
     np.save("data/CGMacros/feature_label/y.npy", y)

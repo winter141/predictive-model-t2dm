@@ -1,13 +1,13 @@
 ## static_user
 
-| Column        | Type / Range                                                            | Description                                                                 |
-|---------------|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| UserID        | –                                                                       | Unique identifier for the participant                                       |
-| Sex           | Factor                                                                  | Participant’s biological sex                                                |
-| BMI           | Numeric: 20.69–49.09                                                    | Body Mass Index of participant at start of study                           |
-| Body weight   | Numeric: 116.8–284.6 (lbs)                                              | Weight of participant at start of study in pounds                          |
-| Height        | Numeric: 59–72 (inches)                                                 | Height of participant in inches                                             |
-| Self-identify | Factor: African American Black, African American, Hispanic/Latino, White | Participant's self-identified race/ethnicity                               |
+| Column        | Type / Range                                                            | Description                                       |
+|---------------|-------------------------------------------------------------------------|---------------------------------------------------|
+| UserID        | –                                                                       | Unique identifier for the participant             |
+| Sex           | Numeric (0, 1)                                                          | Participant’s biological sex. 0 Female, 1 Male    |
+| BMI           | Numeric: 20.69–49.09                                                    | Body Mass Index of participant at start of study  |
+| Body weight   | Numeric: 116.8–284.6 (lbs)                                              | Weight of participant at start of study in pounds |
+| Height        | Numeric: 59–72 (inches)                                                 | Height of participant in inches                   |
+| Self-identify | Factor: African American Black, African American, Hispanic/Latino, White | Participant's self-identified race/ethnicity      |
 
 ---
 

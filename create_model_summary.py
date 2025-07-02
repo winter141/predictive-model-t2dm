@@ -70,6 +70,10 @@ def create_model_summary(
     else:
         raise ValueError("Model Type not supported")
 
+    # Predicted v Actual Graph
+    # preds = model.predict(x_test)
+    # plt_model_results(preds, y_test, "")
+
     print("Starting SHAP Analysis")
     output += "\n## SHAP Analysis ##"
     SHAP_analysis(x_test, model, feature_names, shap_out)
@@ -97,7 +101,7 @@ if __name__ == "__main__":
     y = np.load("data/CGMacros/feature_label/y.npy", allow_pickle=True)
     feature_names = np.load("data/CGMacros/feature_label/feature_names.npy", allow_pickle=True)
 
-    title = "macro_and_fiber_only"
+    title = "temporal_log_bio"
     create_model_summary(x,
                          y,
                          feature_names,
@@ -105,3 +109,4 @@ if __name__ == "__main__":
                          shap_out=f"results/CGMacros/SHAP_PDP/{title}_shap.png",
                          pdp_out=f"results/CGMacros/SHAP_PDP/{title}_pdp.png",
                          )
+    # create_model_summary(x, y, feature_names, r_iterations=1)

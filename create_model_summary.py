@@ -101,7 +101,7 @@ if __name__ == "__main__":
     y = np.load("data/CGMacros/feature_label/y.npy", allow_pickle=True)
     feature_names = np.load("data/CGMacros/feature_label/feature_names.npy", allow_pickle=True)
 
-    title = "temporal_log_bio"
+    title = "temporal_log_bio_user_categorical"
     create_model_summary(x,
                          y,
                          feature_names,
@@ -109,4 +109,4 @@ if __name__ == "__main__":
                          shap_out=f"results/CGMacros/SHAP_PDP/{title}_shap.png",
                          pdp_out=f"results/CGMacros/SHAP_PDP/{title}_pdp.png",
                          )
-    # create_model_summary(x, y, feature_names, r_iterations=1)
+    # create_model_summary(x, y, feature_names, r_iterations=100)

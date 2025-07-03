@@ -8,7 +8,7 @@ import pandas as pd
 
 MMOL_TO_MGDL = 18
 X_LABELS: dict = {
-    "static_user": ["Sex", "BMI", "Body weight", "Height", "Self-identity"],
+    "static_user": ["UserID", "Sex", "BMI", "Body weight", "Height", "Self-identity"],
     # "dynamic_user": ["HR", "Calories (Activity)", "Mets"],
     "log": ["Energy", "Carbohydrate", "Protein", "Fat", "Fiber"],
     # Engineered Features
@@ -190,6 +190,10 @@ class FeatureLabelReducer:
         self.full_df["cgm_current"] = self.full_df.apply(apply_cgm_current, axis=1)
 
         self.full_df["time_since_last_meal"] = self.full_df.apply(self._time_since_last_meal, axis=1)
+
+        # Make user a categorical feature
+        self.full_df["UserID"] = self.full_df["UserID"].astype(str)
+
         return self.full_df
 
     def _time_since_last_meal(self, row):
@@ -231,13 +235,15 @@ class FeatureLabelReducer:
             return closest_row["reading"]
         return None
 
-
-    def get_x_y_data(self, x_labels_dict=None, y_label=Y_LABEL):
+    def get_x_y_data(self, x_labels_dict=None, y_label=Y_LABEL, users: list = None):
         if x_labels_dict is None:
             x_labels_dict = X_LABELS
 
         reduced: pandas.DataFrame = self.join_all()
         reduced = reduced[reduced[y_label].notna()]  # drop rows where auc is nan
+
+        if users is not None:
+            reduced = reduced[reduced["UserID"].isin(users)]
 
         feature_names = get_feature_names(x_labels_dict)
 
@@ -261,6 +267,7 @@ if __name__ == "__main__":
     # ----------------------------------- #
     reducer = FeatureLabelReducer(df_dict)
     feature_names, x, y = reducer.get_x_y_data()
+    print(len(x))
 
     np.save("data/CGMacros/feature_label/feature_names.npy", feature_names)
     np.save("data/CGMacros/feature_label/x.npy", x)

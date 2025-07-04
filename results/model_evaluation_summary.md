@@ -22,3 +22,6 @@
 **CGMacros**
 - Just food macro and fiber, got a R score of 0.364
 - Adding personal info (from bio), this increased to 0.628
+- Adding temporal data (cgm_p30, cgm_p60, cgm_p120, meal_hour, time_since_last_meal) improved this to 0.708
+- Adding user id as a categorical feature increased to 0.743
+  - Note: certain changes need to be made to make sure this scales well with multiple users.

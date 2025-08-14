@@ -8,7 +8,7 @@ import pandas as pd
 
 MMOL_TO_MGDL = 18
 X_LABELS: dict = {
-    "static_user": ["UserID", "Sex", "BMI", "Body weight", "Height", "Self-identity"],
+    "static_user": ["Sex", "BMI", "Body weight", "Height", "Self-identity"],
     # "dynamic_user": ["HR", "Calories (Activity)", "Mets"],
     "log": ["Energy", "Carbohydrate", "Protein", "Fat", "Fiber"],
     # Engineered Features
@@ -197,6 +197,7 @@ class FeatureLabelReducer:
         return self.full_df
 
     def _time_since_last_meal(self, row):
+        """time difference in minutes"""
         timestamp = row["Timestamp"]
         user = row["UserID"]
 

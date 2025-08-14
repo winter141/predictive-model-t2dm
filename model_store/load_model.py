@@ -34,6 +34,8 @@ def compare(preds, y_test):
 if __name__ == "__main__":
     feature_names, model = load_model("model_v1.pkl")
     test_x, test_y = load_test_inputs(10)
+    print(feature_names)
+    print(list(test_x[0]))
 
     predictions = predict(model, test_x)
 

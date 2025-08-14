@@ -19,6 +19,11 @@ Y_LABEL = "auc"
 MIN_CGM_READINGS = 20  # Minimum cgm readings to qualify food for model
 
 
+# IMPERIAL TO METRIC CONVERSIONS
+LBS_TO_KG = 1/2.20462262  # BODY WEIGHT
+INCH_TO_CM = 2.54  # HEIGHT
+
+
 class Dataset(Enum):
     OLD = 0
     CG_MACROS = 1
@@ -90,6 +95,8 @@ class CGMacrosData(DataABC):
             log_df["reading"] /= MMOL_TO_MGDL
         self.bio_df.rename(columns={'subject': 'UserID', 'Gender': 'Sex'}, inplace=True)
         self.bio_df['Sex'] = self.bio_df['Sex'].map({'M': 1, 'F': 0})
+        self.bio_df['Height'] *= INCH_TO_CM
+        self.bio_df["Body weight"] *= LBS_TO_KG
 
     def pickle(self):
         self.bio_df.rename(columns={'subject': 'UserID'}, inplace=True)

@@ -101,7 +101,7 @@ if __name__ == "__main__":
     y = np.load("data/CGMacros/feature_label/y.npy", allow_pickle=True)
     feature_names = np.load("data/CGMacros/feature_label/feature_names.npy", allow_pickle=True)
 
-    title = "temporal_log_bio_user_categorical"
+    title = "temporal_log_no_fiber_no_time_since_last_meal_no_bmi"
     create_model_summary(x,
                          y,
                          feature_names,

@@ -8,12 +8,12 @@ import pandas as pd
 
 MMOL_TO_MGDL = 18
 X_LABELS: dict = {
-    "static_user": ["Sex", "BMI", "Body weight", "Height", "Self-identity"],
+    "static_user": ["Sex", "Body weight", "Height", "Self-identity"],  # left out bmi
     # "dynamic_user": ["HR", "Calories (Activity)", "Mets"],
-    "log": ["Energy", "Carbohydrate", "Protein", "Fat", "Fiber"],
+    "log": ["Energy", "Carbohydrate", "Protein", "Fat"], # Left out Fiber
     # Engineered Features
     "temporal_cgm": ["cgm_p30", "cgm_p60", "cgm_p120"],
-    "temporal_food": ["meal_hour", "time_since_last_meal"]
+    "temporal_food": ["meal_hour"]  # Left out "time_since_last_meal"
 }
 Y_LABEL = "auc"
 MIN_CGM_READINGS = 20  # Minimum cgm readings to qualify food for model

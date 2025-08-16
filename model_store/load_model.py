@@ -16,7 +16,9 @@ def load_test_inputs(rows: int) -> tuple[np.array, np.array]:
     """Pick {rows} random rows"""
     x = np.load("../data/CGMacros/feature_label/x.npy", allow_pickle=True)
     y = np.load("../data/CGMacros/feature_label/y.npy", allow_pickle=True)
-
+    print("-" * 50)
+    print(x)
+    print("-" * 50)
     n = len(x)
     permutation = np.random.permutation(n)
 
@@ -37,7 +39,13 @@ if __name__ == "__main__":
     print(feature_names)
     print(list(test_x[0]))
 
+    test_x = [[1, 70, 170, 109.02000000000001, 13.6196, 8.3898, 0.474, 4, 20.5, 21.2, 18.7, True, False, False, False]]
+
+    print(test_y)
+
     predictions = predict(model, test_x)
+
+    print(predictions)
 
     # ---
     compare(predictions, test_y)

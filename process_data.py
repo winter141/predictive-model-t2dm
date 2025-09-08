@@ -8,11 +8,11 @@ import pandas as pd
 
 MMOL_TO_MGDL = 18
 X_LABELS: dict = {
-    "static_user": ["Sex", "Body weight", "Height", "Self-identity"],  # left out bmi
+    "static_user": ["Sex", "Body weight", "Height"],  # left out bmi, Self-identity
     # "dynamic_user": ["HR", "Calories (Activity)", "Mets"],
     "log": ["Energy", "Carbohydrate", "Protein", "Fat"], # Left out Fiber
     # Engineered Features
-    "temporal_cgm": ["cgm_p30", "cgm_p60", "cgm_p120"],
+    # "temporal_cgm": ["cgm_p30", "cgm_p60", "cgm_p120"],
     "temporal_food": ["meal_hour"]  # Left out "time_since_last_meal"
 }
 Y_LABEL = "auc"

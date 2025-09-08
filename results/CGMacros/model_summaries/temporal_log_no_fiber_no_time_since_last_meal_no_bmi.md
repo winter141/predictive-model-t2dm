@@ -4,7 +4,7 @@
 
 **Features:** Sex, Body weight, Height, Energy, Carbohydrate, Protein, Fat, cgm_p30, cgm_p60, cgm_p120, meal_hour, Self-identity_African American, Self-identity_Black, African American, Self-identity_Hispanic/Latino, Self-identity_White
 
-**R (100 iterations):** Mean 0.698, Std 0.036
+**R (100 iterations):** Mean 0.699, Std 0.040
 ## SHAP Analysis ##
 
 SHAP Analysis Plot in: results/CGMacros/SHAP_PDP/temporal_log_no_fiber_no_time_since_last_meal_no_bmi_shap.png

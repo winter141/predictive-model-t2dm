@@ -31,6 +31,8 @@ type SelfIdentity = 'Self-identity_African American' | 'Self-identity_Black, Afr
 import requests
 from datetime import datetime, timedelta
 import xgboost as xgb
+import json
+
 
 from model_store.load_model import load_model
 
@@ -163,9 +165,11 @@ if __name__ == "__main__":
     # json_data = get_data()
     # print(json_data)
 
-    xs, ys = process_data(SAMPLE_DATA)
+    # xs, ys = process_data(SAMPLE_DATA)
     # print("Data processed")
     # feature_names, model = load_model("model_v1.pkl")
     # print("Model loaded")
     # new_model = update_modal(model, xs, ys)
+    inputs = json.loads("%255B1%252C70%252C170%252C158%252C23.5%252C3.53%252C5.35%252C12%252Ctrue%252Cfalse%252Cfalse%252Cfalse%252C44.5%252C40%252C32.3%255D")
+
 

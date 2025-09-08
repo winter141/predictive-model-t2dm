@@ -98,6 +98,14 @@ def PDP_analysis(model, x_test, feature_names, pdp_out):
     plt.close()
 
 
+def actual_expected_plt(preds, y_test, out):
+    plt.plot(preds, y_test, 'o')
+
+    if out is not None:
+        plt.savefig(out, bbox_inches='tight')
+    plt.show()
+
+
 def get_new_preds(x: list, y: list, model_type: ModelType = ModelType.XGBOOST):
     """
     Split data and re-build model and find predictions
@@ -115,6 +123,7 @@ def get_new_preds(x: list, y: list, model_type: ModelType = ModelType.XGBOOST):
         raise ValueError("Model Type not supported")
 
     return model.predict(x_test), y_test
+
 
 
 if __name__ == "__main__":

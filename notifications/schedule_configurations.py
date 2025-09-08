@@ -1,0 +1,5 @@
+# CONFIGURATIONS
+MIN_MINUTES_APART = 120
+MAX_NOTIFICATIONS = 3
+BUCKET_MINUTE_SIZE = 15
+NOTIFICATION_MINUTE_BUFFER = 0  # We want to send the notification a little after they usually eat

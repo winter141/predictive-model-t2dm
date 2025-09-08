@@ -20,8 +20,9 @@ def get_trained_model() -> tuple[list[str], xgb.XGBRegressor]:
 
 
 def main():
-    filename = "model_v1.pkl"
+    filename = "model_v1_no_cgm.pkl"
     feature_names, model = get_trained_model()
+    print(feature_names)
     joblib.dump(value=[feature_names, model], filename=f"../models/{filename}")
 
 

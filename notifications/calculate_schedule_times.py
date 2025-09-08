@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from datetime import datetime, timedelta
 from collections import defaultdict
 from notifications.schedule_configurations import *
@@ -30,7 +33,7 @@ class ScheduleCalculatorBase(ABC):
         return h * 60 + m
 
     @staticmethod
-    def _minutes_to_time(m):
+    def _minutes_to_time(m: int):
         h = (m // 60) % 24
         min_rem = m % 60
         return f"{h:02d}:{min_rem:02d}"
@@ -78,11 +81,9 @@ class SegmentedScheduleCalculator(ScheduleCalculatorBase):
         # Divide day into segments:
         # 0-4am, 4-11am, 11am-3pm, 3pm-5pm, 5pm-
         # segments = [(0, 4 * 60), (4*60, 11*60), (11+60, 15*60), (15 * 60, 17 * 60), (17*60, 24*60)]
-        segments = [(0, 11 * 60), (11+60, 16*60), (16 * 60, 24 * 60)]
-
         chosen = []
 
-        for start, end in segments:
+        for start, end in SEGMENTED_SCHEDULES:
             segment_buckets = [(m, kcal) for m, kcal in bucket_energy.items() if start <= m < end]
             if not segment_buckets:
                 continue
@@ -103,43 +104,32 @@ class SegmentedScheduleCalculator(ScheduleCalculatorBase):
 
         chosen.sort()
         return chosen
+    
 
+class WeightedAverageSegmentedCalculator(ScheduleCalculatorBase):
+    def calculate_schedule_times(self, all_logs):
+        segments = [[] for _ in SEGMENTED_SCHEDULES]
+        for (t, energy) in all_logs:
+            minutes = ScheduleCalculatorBase._time_to_minutes(t)
+            for i, (start, end) in enumerate(SEGMENTED_SCHEDULES):
+                if minutes >= start and minutes < end:
+                    segments[i].append((minutes, energy))
 
-def weightedAvgSegmented(base_segments, logs):
-    segments = [[] for start, end in base_segments]
-    for (t, energy) in logs:
-        minutes = ScheduleCalculatorBase._time_to_minutes(t)
-        for i, (start, end) in enumerate(base_segments):
-            if minutes >= start and minutes < end:
-                segments[i].append((minutes, energy))
+        scheduled_minutes = []
+        for segment in segments:
+            totalEnergy = sum([energy for _, energy in segment])
+            time = 0
+            for minutes, energy in segment:
+                weight = energy / totalEnergy
+                time += weight * minutes
+            n = len(scheduled_minutes)
+            if time > 0 and (n == 0 or (time - scheduled_minutes[n - 1] >= MIN_MINUTES_APART)):
+                scheduled_minutes.append(time)
 
-    for segment in segments:
-        totalEnergy = sum([energy for _, energy in segment])
-        time = 0
-        for minutes, energy in segment:
-            weight = energy / totalEnergy
-            time += weight * minutes
-        print("-" * 50)
-        print([f"{(min/60):.1f}" for min, eng in segment])
-        print(time, time/60)
-
-
-def tester():
-    nums = [8, 5, 2, 3, 4, 5, 2, 12, 32, 1, 1, 2]
-    arr =  [7, 5, 5, 5, 2, 3, 4, 14, 12, 1, 2, 3]
-
-    s = sum(nums)
-    t = 0
-    for i, n in enumerate(nums):
-        weight = n / s
-        t += weight * arr[i]
-    print(t)
-    print(sum(arr) / len(nums))
-
-
+        return [self._minutes_to_time(int(m + NOTIFICATION_MINUTE_BUFFER)) for m in scheduled_minutes]
+    
 
 if __name__ == "__main__":
-    tester()
     base_segments = [(0, 11 * 60), (11*60, 16*60), (16 * 60, 24 * 60)]
     logs = [
         ("08:05", 200), ("09:10", 150), ("10:25", 100),
@@ -162,4 +152,5 @@ if __name__ == "__main__":
         ("12:10", 260), ("14:15", 160), ("16:05", 90),
         ("18:20", 300), ("20:15", 220), ("22:10", 110)
     ]
-    # weightedAvgSegmented(base_segments, logs)
+    segs = WeightedAverageSegmentedCalculator().calculate_schedule_times(logs)
+    print(segs)

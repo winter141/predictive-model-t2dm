@@ -401,6 +401,6 @@ if __name__ == "__main__":
                              logs9, logs10, logs11, logs12, logs13, logs14, logs15, logs16,
                              log17, log18, log19, log20, log21, log22, log23, log24,
                              log25, log26, log27, log28, log29, log30, log31, log32],
-                            [WeightedAverageSegmentedCalculator()],
+                            [SegmentedScheduleCalculator()],
                             "notifications/figures/unique_meal_patterns.pdf")
     print("Saved PDF with 8 unique meal pattern graphs: unique_meal_patterns.pdf")

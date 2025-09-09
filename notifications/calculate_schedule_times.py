@@ -152,5 +152,9 @@ if __name__ == "__main__":
         ("12:10", 260), ("14:15", 160), ("16:05", 90),
         ("18:20", 300), ("20:15", 220), ("22:10", 110)
     ]
-    segs = WeightedAverageSegmentedCalculator().calculate_schedule_times(logs)
+
+    logs2 = [
+        ("08:00", 1000), ("09:00", 3000)
+    ]
+    segs = WeightedAverageSegmentedCalculator().calculate_schedule_times(logs2)
     print(segs)

@@ -6,6 +6,8 @@ import numpy as np
 import pandas
 import pandas as pd
 
+
+
 MMOL_TO_MGDL = 18
 X_LABELS: dict = {
     "static_user": ["Sex", "Body weight", "Height"],  # left out bmi, Self-identity
@@ -27,6 +29,9 @@ INCH_TO_CM = 2.54  # HEIGHT
 class Dataset(Enum):
     OLD = 0
     CG_MACROS = 1
+    SHANGHAI_T1DM = 3
+    SHANGHAI_T2DM = 4
+    UC_HT_T1DM = 5
 
 
 def get_feature_names(x_labels_dict=None):
@@ -119,18 +124,79 @@ class CGMacrosData(DataABC):
         full_cgm_df.to_pickle(os.path.join(self.out, "cgm.pkl"))
 
 
+class UC_HT_T1DM_Data(DataABC):
+    def __init__(self, patient_data: dict, out: str):
+        self.patient_data = patient_data
+        self.out = out
+
+        # Logs is just going to have carbohydrates
+        self.logs_df = None
+        self.cgm_df = None
+    
+    def pickle(self):
+        all_cgm = []
+        all_logs = []
+        for user_id, content in self.patient_data.items():
+            cgm_df: pd.DataFrame = content["Glucose"]["Sheet1"]
+            cgm_df = cgm_df.rename(columns={
+                "Unnamed: 0": "Timestamp",
+                "Value (mg/dl)": "Reading"
+            })
+            cgm_df["Reading"] /= MMOL_TO_MGDL
+            cgm_df["UserID"] = user_id
+            cgm_df = cgm_df[["UserID", "Timestamp", "Reading"]]
+            all_cgm.append(cgm_df)
+
+            carb_df: pd.DataFrame = content["Carbohidrates"]["Sheet1"]
+            carb_df["UserID"] = user_id
+            carb_df = carb_df.rename(columns={
+                "Unnamed: 0": "Timestamp",
+                "Value (g)": "Carbohydrates"
+            })
+            all_logs.append(carb_df)
+            
+
+        cgm_all = pd.concat(all_cgm, ignore_index=True)
+        logs_all = pd.concat(all_logs, ignore_index=True)
+        cgm_all.to_pickle(os.path.join(self.out, "log.pkl"))
+        logs_all.to_pickle(os.path.join(self.out, "cgm.pkl"))
+
+        return None
+
+
 def pickle_data(dataset: Dataset):
+    print(dataset)
 
     if dataset == Dataset.OLD:
-        dataframes = process_xlsx("data/old/CGM_TEI_Cleaned(1).xlsx")
-        return OldData(dataframes, "data/old/pickle/").pickle()
+        dataframes = process_xlsx("../data/old/CGM_TEI_Cleaned(1).xlsx")
+        return OldData(dataframes, "../data/old/pickle/").pickle()
 
     elif dataset == Dataset.CG_MACROS:
-        cgm_folder_path = "data/CGMacros/cgm"
+        cgm_folder_path = "../data/CGMacros/cgm"
         file_pattern = os.path.join(cgm_folder_path, "*.csv")
         log_dataframes = [(pd.read_csv(file), int(os.path.basename(file).split('-')[1].split('.')[0])) for file in glob.glob(file_pattern)]
-        bio_dataframe = pd.read_csv("data/CGMacros/bio.csv")
+        bio_dataframe = pd.read_csv("../data/CGMacros/bio.csv")
         return CGMacrosData(log_dataframes, bio_dataframe, "data/CGMacros/pickle/").pickle()
+    
+    elif dataset == Dataset.UC_HT_T1DM:
+        base_folder = r"..\data\UC_HT_T1DM\UC_HT_T1DM-main"
+        data_folder = f"{base_folder}/data"
+        patient_folders = [f for f in glob.glob(os.path.join(data_folder, "*")) if os.path.isdir(f)]
+
+        patient_data = {}
+        for folder in patient_folders:
+            patient_id = os.path.basename(folder).replace("Patient", "")
+            patient_id = int(patient_id) if patient_id.isdigit() else patient_id
+
+            patient_data[patient_id] = {
+                "Carbohidrates": process_xlsx(os.path.join(folder, "Carbohidrates.xlsx")),
+                "Glucose": process_xlsx(os.path.join(folder, "Glucose.xlsx")),
+                "HeartRate": process_xlsx(os.path.join(folder, "Heart Rate.xlsx")),
+                "IGAR": process_xlsx(os.path.join(folder, "IGAR.xlsx")),
+                "Steps": process_xlsx(os.path.join(folder, "Steps.xlsx")),
+            }
+        return UC_HT_T1DM_Data(patient_data=patient_data, out=f"{base_folder}/pickle/").pickle()
+
 
     raise ValueError("Dataset selected is not valid")
 
@@ -267,16 +333,20 @@ class FeatureLabelReducer:
 
 
 if __name__ == "__main__":
-    # pickle_data(Dataset.CG_MACROS)
-    base_file_path = "data/CGMacros/pickle/"
+    # pickle_data(Dataset.UC_HT_T1DM)
+    # base_file_path = "../data/CGMacros/pickle/"
+    base_file_path = "../data/UC_HT_T1DM/UC_HT_T1DM-main/pickle/"
     df_dict = dict()
-    for pkl in ["cgm", "dynamic_user", "log", "static_user"]:
+    # for pkl in ["cgm", "dynamic_user", "log", "static_user"]:
+    #     df_dict[pkl] = load_dataframe(base_file_path + pkl + ".pkl")
+    for pkl in ["cgm", "log"]:
         df_dict[pkl] = load_dataframe(base_file_path + pkl + ".pkl")
-    # ----------------------------------- #
-    reducer = FeatureLabelReducer(df_dict)
-    feature_names, x, y = reducer.get_x_y_data()
-    print(len(x))
+    print(df_dict)
+    # # ----------------------------------- #
+    # reducer = FeatureLabelReducer(df_dict)
+    # feature_names, x, y = reducer.get_x_y_data()
+    # print(len(x))
 
-    np.save("data/CGMacros/feature_label/feature_names.npy", feature_names)
-    np.save("data/CGMacros/feature_label/x.npy", x)
-    np.save("data/CGMacros/feature_label/y.npy", y)
+    # np.save("data/CGMacros/feature_label/feature_names.npy", feature_names)
+    # np.save("data/CGMacros/feature_label/x.npy", x)
+    # np.save("data/CGMacros/feature_label/y.npy", y)

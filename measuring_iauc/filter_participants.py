@@ -10,7 +10,7 @@ This was obtained by the thresholds for HbA1C consistent in https://diabetes.org
 import numpy as np
 import pandas as pd
 
-from process_data import FeatureLabelReducer
+from process_data.main import FeatureLabelReducer
 
 
 def load_dataframe(filepath="./data/log_with_cgm.pkl") -> pd.DataFrame:

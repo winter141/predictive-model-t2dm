@@ -6,10 +6,10 @@ from typing import Union
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
-from process_data import load_dataframe
+from process_data.main import load_dataframe
 import pandas as pd
 from datetime import timedelta
-from process_data import FeatureLabelReducer
+from process_data.main import FeatureLabelReducer
 
 
 def finalize_and_save(fig, pdf):

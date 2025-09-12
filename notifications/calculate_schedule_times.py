@@ -28,7 +28,7 @@ class ScheduleCalculatorBase(ABC):
         return bucket_energy
 
     @staticmethod
-    def _time_to_minutes(t):
+    def _time_to_minutes(t: str):
         h, m = map(int, t.split(":"))
         return h * 60 + m
 

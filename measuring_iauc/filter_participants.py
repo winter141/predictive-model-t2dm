@@ -9,11 +9,13 @@ This was obtained by the thresholds for HbA1C consistent in https://diabetes.org
 """
 import numpy as np
 import pandas as pd
-
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from process_data.main import FeatureLabelReducer
 
 
-def load_dataframe(filepath="./data/log_with_cgm.pkl") -> pd.DataFrame:
+def load_dataframe(filepath) -> pd.DataFrame:
     return pd.read_pickle(filepath)
 
 
@@ -34,14 +36,19 @@ if __name__ == "__main__":
 
     filtered_dfs: dict[str, pd.DataFrame] = filter_users(df_dict['static_user'])
 
-    base_cgmacros_path = "../data/CGMacros/feature_label/"
-    for name, df in filtered_dfs.items():
-        df_dict['static_user'] = df
+    for key, df in filtered_dfs.items():
+        print(key)
+        print(df["UserID"].to_numpy())
+        print()
 
-        reducer = FeatureLabelReducer(df_dict)
-        feature_names, x, y = reducer.get_x_y_data()
+    # base_cgmacros_path = "../data/CGMacros/feature_label/"
+    # for name, df in filtered_dfs.items():
+    #     df_dict['static_user'] = df
 
-        np.save(f"{base_cgmacros_path}{name}/feature_names.npy", feature_names)
-        np.save(f"{base_cgmacros_path}{name}/x.npy", x)
-        np.save(f"{base_cgmacros_path}{name}/y.npy", y)
+    #     reducer = FeatureLabelReducer(df_dict)
+    #     feature_names, x, y = reducer.get_x_y_data()
+
+    #     np.save(f"{base_cgmacros_path}{name}/feature_names.npy", feature_names)
+    #     np.save(f"{base_cgmacros_path}{name}/x.npy", x)
+    #     np.save(f"{base_cgmacros_path}{name}/y.npy", y)
 

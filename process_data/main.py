@@ -130,8 +130,6 @@ class UC_HT_T1DM_Data(DataABC):
         self.out = out
 
         # Logs is just going to have carbohydrates
-        self.logs_df = None
-        self.cgm_df = None
     
     def pickle(self):
         all_cgm = []
@@ -151,15 +149,16 @@ class UC_HT_T1DM_Data(DataABC):
             carb_df["UserID"] = user_id
             carb_df = carb_df.rename(columns={
                 "Unnamed: 0": "Timestamp",
-                "Value (g)": "Carbohydrates"
+                "Value (g)": "Carbohydrate"
             })
             all_logs.append(carb_df)
             
 
         cgm_all = pd.concat(all_cgm, ignore_index=True)
         logs_all = pd.concat(all_logs, ignore_index=True)
-        cgm_all.to_pickle(os.path.join(self.out, "log.pkl"))
-        logs_all.to_pickle(os.path.join(self.out, "cgm.pkl"))
+
+        cgm_all.to_pickle(os.path.join(self.out, "cgm.pkl"))
+        logs_all.to_pickle(os.path.join(self.out, "log.pkl"))
 
         return None
 
@@ -179,7 +178,7 @@ def pickle_data(dataset: Dataset):
         return CGMacrosData(log_dataframes, bio_dataframe, "data/CGMacros/pickle/").pickle()
     
     elif dataset == Dataset.UC_HT_T1DM:
-        base_folder = r"..\data\UC_HT_T1DM\UC_HT_T1DM-main"
+        base_folder = "data/UC_HT_T1DM"
         data_folder = f"{base_folder}/data"
         patient_folders = [f for f in glob.glob(os.path.join(data_folder, "*")) if os.path.isdir(f)]
 
@@ -333,15 +332,11 @@ class FeatureLabelReducer:
 
 
 if __name__ == "__main__":
-    # pickle_data(Dataset.UC_HT_T1DM)
+    pickle_data(Dataset.UC_HT_T1DM)
     # base_file_path = "../data/CGMacros/pickle/"
-    base_file_path = "../data/UC_HT_T1DM/UC_HT_T1DM-main/pickle/"
-    df_dict = dict()
+    # df_dict = dict()
     # for pkl in ["cgm", "dynamic_user", "log", "static_user"]:
     #     df_dict[pkl] = load_dataframe(base_file_path + pkl + ".pkl")
-    for pkl in ["cgm", "log"]:
-        df_dict[pkl] = load_dataframe(base_file_path + pkl + ".pkl")
-    print(df_dict)
     # # ----------------------------------- #
     # reducer = FeatureLabelReducer(df_dict)
     # feature_names, x, y = reducer.get_x_y_data()

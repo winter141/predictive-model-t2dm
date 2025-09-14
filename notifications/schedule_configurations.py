@@ -1,7 +1,0 @@
-# CONFIGURATIONS
-MIN_MINUTES_APART = 120
-MAX_NOTIFICATIONS = 3
-BUCKET_MINUTE_SIZE = 15
-NOTIFICATION_MINUTE_BUFFER = 0  # We want to send the notification a little after they usually eat
-
-SEGMENTED_SCHEDULES = [(0, 11 * 60), (11*60, 16*60), (16 * 60, 24 * 60)]

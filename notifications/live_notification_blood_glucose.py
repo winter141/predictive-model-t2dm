@@ -3,7 +3,7 @@ Now we look at just considering the live blood glucose that sends a reminder if 
 """
 
 # Let's take the min and max reading in past 30mins and look at the signed percentage change
-from live_blood_glucose_configurations import PERECNTAGE_CHANGE_THRESHOLD
+from configurations import PERECNTAGE_CHANGE_THRESHOLD
 
 
 def send_reminder_blood_glucose(readings: list[float]) -> bool:

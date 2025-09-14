@@ -39,7 +39,26 @@ if __name__ == "__main__":
     for key, df in filtered_dfs.items():
         print(key)
         print(df["UserID"].to_numpy())
+        
+
+        for user in df["UserID"].to_numpy():
+            print(user)
+            ts = df_dict['log'][df_dict['log']["UserID"] == user]["Timestamp"]
+            start = min(ts)
+            end = max(ts)
+            delta = end - start
+
+            days = delta.days
+            hours = delta.seconds // 3600
+
+            print(f"Start: {start}")
+            print(f"End:   {end}")
+            print(f"Duration: {days} days, {hours} hours")
+            print("\n" + "-" * 25 + "\n")
+                    
+                    
         print()
+
 
     # base_cgmacros_path = "../data/CGMacros/feature_label/"
     # for name, df in filtered_dfs.items():

@@ -3,7 +3,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from datetime import datetime, timedelta
 from collections import defaultdict
-from notifications.schedule_configurations import *
+from configurations import *
 from abc import ABC, abstractmethod
 from collections import defaultdict
 

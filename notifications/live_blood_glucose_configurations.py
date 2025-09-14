@@ -1,5 +1,0 @@
-# Check every 30mins
-CRON_MIN_SCHEDULING = 30
-
-# max/min 
-PERECNTAGE_CHANGE_THRESHOLD = 1.75

@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Union
 import numpy as np
-import shap
 from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
 from models import get_new_preds, ModelType, SHAP_analysis, split_train_test, xgboost, gradient_boosting, PDP_analysis, \
@@ -26,6 +25,17 @@ def plt_model_results(preds, y_test, model_name: str):
     plt.title(f"{model_name} R={r_value:.3f} p-value={p_value:.3f}")
 
     plt.show()
+
+
+def run_r_iterations(x: list, y: list, r_iterations: int, print_updates=False):
+    rs = []
+    for i in range(r_iterations):
+        preds, y_test = get_new_preds(x, y)
+        r, p = pearsonr(preds, y_test)
+        rs.append(r)
+        if print_updates and i % np.ceil(r_iterations / 10) == 0:
+            print(f"r_iteration: {i}")
+    return rs
 
 
 def create_model_summary(
@@ -54,13 +64,7 @@ def create_model_summary(
     output += f"\n\n**Model: {model_type.name}** | n_estimators: {n_estimators}, learning_rate: {learning_rate}, max_depth: {max_depth}"
     output += "\n\n**Features:** " + ", ".join([name for name in feature_names])
 
-    rs = []
-    for i in range(r_iterations):
-        preds, y_test = get_new_preds(x, y)
-        r, p = pearsonr(preds, y_test)
-        rs.append(r)
-        if i % np.ceil(r_iterations / 10) == 0:
-            print(f"r_iteration: {i}")
+    rs = run_r_iterations(x, y, r_iterations, print_updates=True)
     output += f"\n\n**R ({r_iterations} iterations):** Mean {np.mean(rs):.3f}, Std {np.std(rs):.3f}"
 
     # Create model for shap/pdp analysis

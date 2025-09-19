@@ -14,7 +14,7 @@ X_LABELS: dict = {
     # "dynamic_user": ["HR", "Calories (Activity)", "Mets"],
     "log": ["Energy", "Carbohydrate", "Protein", "Fat"], # Left out Fiber
     # Engineered Features
-    # "temporal_cgm": ["cgm_p30", "cgm_p60", "cgm_p120"],
+    "temporal_cgm": ["cgm_p30", "cgm_p60", "cgm_p120"],
     "temporal_food": ["meal_hour"]  # Left out "time_since_last_meal"
 }
 Y_LABEL = "auc"
@@ -34,12 +34,11 @@ class Dataset(Enum):
     UC_HT_T1DM = 5
 
 
-def get_feature_names(x_labels_dict=None):
-    if x_labels_dict is None:
-        x_labels_dict = X_LABELS
+def get_feature_names(x_labels_dict, include_static_user=True):
     flat_x_labels = []
-    for section in x_labels_dict.values():
-        flat_x_labels.extend(section)
+    for key, section in x_labels_dict.items():
+        if key != "static_user" or include_static_user:
+            flat_x_labels.extend(section)
     return flat_x_labels
 
 
@@ -203,9 +202,9 @@ def pickle_data(dataset: Dataset):
 class FeatureLabelReducer:
 
     def __init__(self, df_dict: dict[str, pandas.DataFrame]):
-        self.static_user_df = df_dict["static_user"]
+        self.static_user_df = None if "static_user" not in df_dict else df_dict["static_user"]
         self.log_df = df_dict["log"]
-        self.cgm_df = df_dict["cgm"]
+        self.cgm_df = df_dict["cgm"].copy()
         self.dynamic_user_df = None if "dynamic_user" not in df_dict else df_dict["dynamic_user"]
 
         self.cgm_df['Timestamp'] = pd.to_datetime(self.cgm_df['Timestamp'])
@@ -232,15 +231,17 @@ class FeatureLabelReducer:
         delta_minutes = reduced_cgm['Timestamp'].diff().dt.total_seconds() / 60
         rolling_mean = reduced_cgm['reading'].rolling(2).mean() - baseline
         incremental_auc = (rolling_mean * delta_minutes).fillna(0)
-
         iAUC = incremental_auc[incremental_auc > 0].sum()
         return iAUC
 
     def join_all(self):
-        self.full_df = self.static_user_df.merge(self.log_df, on="UserID", how="left")
+        if self.static_user_df is not None:
+            self.full_df = self.static_user_df.merge(self.log_df, on="UserID", how="left")
+        else:
+            self.full_df = self.log_df.copy()
+
 
         self.full_df["auc"] = self.full_df.apply(lambda row: self.reduce_cgm_window_to_area(row, 2), axis=1)
-
         # Add temporal (engineered) features
         self.full_df["meal_hour"] = self.full_df['Timestamp'].dt.hour
         for label, previous_hours in [("cgm_p30", 0.5), ("cgm_p60", 1), ("cgm_p120", 2)]:
@@ -318,7 +319,7 @@ class FeatureLabelReducer:
         if users is not None:
             reduced = reduced[reduced["UserID"].isin(users)]
 
-        feature_names = get_feature_names(x_labels_dict)
+        feature_names = get_feature_names(x_labels_dict, include_static_user=self.static_user_df is not None)
 
         x_df = reduced[feature_names]
         x_df = pd.get_dummies(x_df)

@@ -285,7 +285,7 @@ def plot_blood_glucose_confusion_matrix(confusion_matrix: list[dict], additional
     ax.set_title(title, fontsize=14, wrap=True)
 
     safe_title = re.sub(r'[<>:"/\\|?*]', '_', title)
-    path = os.path.join("notifications", "figures", safe_title + ".png")
+    path = os.path.join("figures", safe_title + ".png")
     
     plt.savefig(path)
     plt.show()
@@ -357,11 +357,11 @@ def plot_logging_history_results(logging_history_data, additional_title: str = "
 
 
 if __name__ == "__main__":
-    CGMacros_cgm_df = pd.read_pickle("data/CGMacros/pickle/cgm.pkl")
-    CGMacros_log_df = pd.read_pickle("data/CGMacros/pickle/log.pkl")
+    CGMacros_cgm_df = pd.read_pickle("../data/CGMacros/pickle/cgm.pkl")
+    CGMacros_log_df = pd.read_pickle("../data/CGMacros/pickle/log.pkl")
 
-    UC_HT_T1DM_cgm_df = pd.read_pickle("data/UC_HT_T1DM/pickle/cgm.pkl")
-    UC_HT_T1DM_log_df = pd.read_pickle("data/UC_HT_T1DM/pickle/log.pkl")
+    UC_HT_T1DM_cgm_df = pd.read_pickle("../data/UC_HT_T1DM/pickle/cgm.pkl")
+    UC_HT_T1DM_log_df = pd.read_pickle("../data/UC_HT_T1DM/pickle/log.pkl")
 
     # diffs = compute_logging_history_difference(CGMacros_log_df, 9, [LogDifferenceMethod.WEIGHTED_AVG, LogDifferenceMethod.LARGEST_LOG])
     # plot_logging_history_results(diffs, additional_title="ALL")
@@ -376,7 +376,7 @@ if __name__ == "__main__":
     # plot_logging_history_results(diffs, additional_title="T2DM")
     # collect_sample_days_data(UC_HT_T1DM_cgm_df, UC_HT_T1DM_log_df)
     
-    r = compute_live_blood_glucose_difference(CGMacros_cgm_df, CGMacros_log_df, user_ids=CGMacro_USER_GROUPS["t2dm"])
+    r = compute_live_blood_glucose_difference(CGMacros_cgm_df, CGMacros_log_df, user_ids=[1])
     confusion_matrix = blood_glucose_notification_confusin_matrix(r)
     
 
@@ -384,7 +384,7 @@ if __name__ == "__main__":
     #     {'user': 1, 'TT': 2, 'FF': 408, 'FT': 75, 'TF': 6}, {'user': 2, 'TT': 21, 'FF': 443, 'FT': 42, 'TF': 62}, 
     # ]
     
-    TT, FF, FT, TF = plot_blood_glucose_confusion_matrix(confusion_matrix, additional_title="T2DM")
+    TT, FF, FT, TF = plot_blood_glucose_confusion_matrix(confusion_matrix, additional_title="[1]")
     
     pc = lambda x : f"{(x * 100):.2f}%"
 

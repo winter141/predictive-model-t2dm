@@ -6,7 +6,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 import xgboost as xgb
 import matplotlib.pyplot as plt
 from sklearn.inspection import PartialDependenceDisplay
-
+from scipy.stats import pearsonr
 TRAIN_TEST_PROPORTION = 0.8
 
 
@@ -98,8 +98,17 @@ def PDP_analysis(model, x_test, feature_names, pdp_out):
     plt.close()
 
 
-def actual_expected_plt(preds, y_test, out):
-    plt.plot(preds, y_test, 'o')
+def actual_expected_plt(predictions, y_test, title, out=None):
+    r, p = pearsonr(predictions, y_test)
+    plt.plot(y_test, predictions, 'o', label=f"R = {r}")
+    min_val = min(min(y_test), min(predictions))
+    max_val = max(max(y_test), max(predictions))
+    plt.plot([min_val, max_val], [min_val, max_val], '--', color='red', label="y=x", alpha=0.8)
+    plt.title(title)
+    plt.legend()
+    plt.xlabel("Actual")
+    plt.ylabel("Predicted")
+    plt.plot()
 
     if out is not None:
         plt.savefig(out, bbox_inches='tight')

@@ -13,8 +13,9 @@ So we can simulate for 3 days.
 
 Not the most efficient, but it does not matter :)
 """
+import json
+
 from matplotlib import cm, pyplot as plt
-import matplotlib.colors as mcolors
 import pandas as pd
 import sys
 from pathlib import Path
@@ -24,7 +25,8 @@ import re
 import os
 from sklearn.metrics import ConfusionMatrixDisplay
 from configurations import CRON_MIN_SCHEDULING, MAX_NOTIFICATIONS, SEGMENTED_SCHEDULES, MIN_MINUTES_APART
-from live_notification_blood_glucose import send_reminder_blood_glucose
+from live_notification_blood_glucose import notify_max_min_ratio, notify_rate_of_change, notify_cusum, \
+    notify_sustained_rise, notify_predictive_residual, notify_hybrid
 from calculate_schedule_times import ScheduleCalculatorBase, WeightedAverageSegmentedCalculator
 from typing import Optional
 import numpy as np
@@ -181,6 +183,17 @@ def compute_live_blood_glucose_difference(cgm_df: pd.DataFrame, log_df: pd.DataF
 
     Note this is going to be MASSIVE!
     """
+
+    methods = {
+        "max_min_ratio": notify_max_min_ratio,
+        "rate_of_change": notify_rate_of_change,
+        "cusum": notify_cusum,
+        "kalman_residual": notify_predictive_residual,
+        "sustained_rise": notify_sustained_rise,
+        "hybrid": notify_hybrid,
+    }
+
+
     users = cgm_df["UserID"].unique() if user_ids is None else user_ids
     
     return_notifications: list[dict] = []
@@ -198,16 +211,19 @@ def compute_live_blood_glucose_difference(cgm_df: pd.DataFrame, log_df: pd.DataF
             # Note: the times are ordered
             upper_bound_time = time + timedelta(minutes=CRON_MIN_SCHEDULING)
             lower_bound_time = time - timedelta(minutes=CRON_MIN_SCHEDULING)
-            selected_readings = f_cgm_df[(pd.to_datetime(f_cgm_df["Timestamp"]) >= lower_bound_time) & (pd.to_datetime(f_cgm_df["Timestamp"]) < upper_bound_time)]["reading"].to_numpy()
-            notification_sent = send_reminder_blood_glucose(selected_readings)
+            selected_readings = f_cgm_df[(pd.to_datetime(f_cgm_df["Timestamp"]) >= lower_bound_time) & (pd.to_datetime(f_cgm_df["Timestamp"]) < upper_bound_time)]["reading"].dropna().to_numpy()
             food_logged = _check_food_loggged_in_period(log_df, user_id, lower_bound_time, upper_bound_time)
 
             notification_check = {
                 "start_time": lower_bound_time,
                 "end_time": upper_bound_time,
-                "notification_sent": notification_sent,
                 "food_logged": food_logged
             }
+
+            # Add different methods for checking if a notification should be sent
+            for key_label, func in methods.items():
+                notification_check[key_label] = func(selected_readings)
+
             send_notification_checks.append(notification_check)
             
             time = upper_bound_time
@@ -228,7 +244,7 @@ def _check_food_loggged_in_period(log_df: pd.DataFrame, user_id, lower_bound_tim
         ].shape[0] > 0
             
 
-def blood_glucose_notification_confusin_matrix(notification_times: list[dict]):
+def blood_glucose_notification_confusion_matrix(notification_times: list[dict], method: str):
     """
     Look at FF, TT, FT, TF
     """
@@ -238,7 +254,7 @@ def blood_glucose_notification_confusin_matrix(notification_times: list[dict]):
         send_notifications: list[dict] = user_data["send_notification_checks"]
 
         for notification_checks in send_notifications:
-            sent: bool = notification_checks["notification_sent"]
+            sent: bool = notification_checks[method]
             logged: bool = notification_checks["food_logged"]
             if sent and logged:
                 TT += 1
@@ -278,7 +294,7 @@ def plot_blood_glucose_confusion_matrix(confusion_matrix: list[dict], additional
     fig, ax = plt.subplots(figsize=(10, 6))
     disp.plot(cmap="Blues", ax=ax, colorbar=True)
 
-    title = f"{additional_title} Blood glucose notification confusion matrix | Method: Max/Min Sliding Window"
+    title = f"{additional_title} Blood glucose notification confusion matrix | Method: {method}"
 
     ax.set_xlabel("Notification Sent", fontsize=12)
     ax.set_ylabel("Food logged in period", fontsize=12)
@@ -376,33 +392,46 @@ if __name__ == "__main__":
     # plot_logging_history_results(diffs, additional_title="T2DM")
     # collect_sample_days_data(UC_HT_T1DM_cgm_df, UC_HT_T1DM_log_df)
     
-    r = compute_live_blood_glucose_difference(CGMacros_cgm_df, CGMacros_log_df, user_ids=[1])
-    confusion_matrix = blood_glucose_notification_confusin_matrix(r)
-    
+    r = compute_live_blood_glucose_difference(CGMacros_cgm_df, CGMacros_log_df)
 
-    # confusion_matrix = [
-    #     {'user': 1, 'TT': 2, 'FF': 408, 'FT': 75, 'TF': 6}, {'user': 2, 'TT': 21, 'FF': 443, 'FT': 42, 'TF': 62}, 
-    # ]
-    
-    TT, FF, FT, TF = plot_blood_glucose_confusion_matrix(confusion_matrix, additional_title="[1]")
-    
-    pc = lambda x : f"{(x * 100):.2f}%"
+    # print(r)
 
-    total = TT + FF + FT + TF
-    
-    print("Total Intervals:", total)
-    for c, label in zip([TT, FF, FT, TF], ["TT", "FF", "FT", "TF"]):
-        print(f"{label} proportion: {pc(c / total)}")
+    # with open('data/live_bg_diff.json', 'w') as json_file:
+    #     json.dump(r, json_file, indent=4, default=str)
+    # print(r)
+
+    for method in ["max_min_ratio", "rate_of_change", "cusum", "kalman_residual", "sustained_rise", "hybrid"]:
 
 
-    print("Of the notifications that were sent")
-    print(f"{pc(TT / (TT + TF))} were sent in an interval where food was logged")
-    print(f"{pc(TF / (TT + TF))} were sent in an interval where food was not logged")
+        confusion_matrix = blood_glucose_notification_confusion_matrix(r, method)
+        #
+        #
+        # # confusion_matrix = [
+        # #     {'user': 1, 'TT': 2, 'FF': 408, 'FT': 75, 'TF': 6}, {'user': 2, 'TT': 21, 'FF': 443, 'FT': 42, 'TF': 62},
+        # # ]
+        #
+        TT, FF, FT, TF = plot_blood_glucose_confusion_matrix(confusion_matrix, additional_title="ALL")
+        #
+
+        if TT > 0 and FT > 0 and FF > 0 and TF > 0:
+            print("\n" + "-" * 20 + method + "-" * 20 + "\n")
+            pc = lambda x : f"{(x * 100):.2f}%"
+
+            total = TT + FF + FT + TF
+
+            print("Total Intervals:", total)
+            for c, label in zip([TT, FF, FT, TF], ["TT", "FF", "FT", "TF"]):
+                print(f"{label} proportion: {pc(c / total)}")
 
 
-    print("of the notification that were not sent")
-    print(f"{pc(FT / (FT + FF))} should have been sent")
-    
+            print("Of the notifications that were sent")
+            print(f"{pc(TT / (TT + TF))} were sent in an interval where food was logged")
+            print(f"{pc(TF / (TT + TF))} were sent in an interval where food was not logged")
+
+
+            print("of the notification that were not sent")
+            print(f"{pc(FT / (FT + FF))} should have been sent")
+
     # Difference example input
     # sch, actual = [423, 803, 1212], [(779, 94.0), (1046, 27.0), (1182, 1.0), (1307, 22.0), (562, 73.0), (796, 28.0), (1265, 1.0), (1278, 14.0), (534, 24.0), (745, 93.0), (1196, 42.0), (1258, 32.0), (607, 66.0)]
     # diffs = scheduled_actual_difference(sch, actual, LogDifferenceMethod.LARGEST_LOG)

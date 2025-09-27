@@ -3,3 +3,4 @@
 ./data/raw_log.pkl
 ./results
 sandbox.py
+.env

@@ -10,10 +10,11 @@ Step Two: Compute the actual/expected for each user using their unique logging h
 
 Step Three: Compute the actual/expected for each user with the weighted ensemble model.
 """
+import json
 from abc import ABC, abstractmethod
 import pandas as pd
 from matplotlib import pyplot as plt
-
+import numpy as np
 from model_evaluation.utils import _get_start_dates, _get_df_dict_in_range, _get_user_filtered_df
 from models import xgboost, actual_expected_plt
 from process_data.main import FeatureLabelReducer, load_dataframe
@@ -41,6 +42,18 @@ class GlobalModel(BaseAnalysis):
     def __init__(self, train_df_dict: dict[str, pd.DataFrame], test_df_dict: dict[str, pd.DataFrame]):
         self.train_df_dict = train_df_dict
         self.test_df_dict = test_df_dict
+
+    def get_model(self, user_ids: list = None):
+        f_train_dict = self.train_df_dict
+        if user_ids is not None:
+            f_train_dict = _get_user_filtered_df(self.train_df_dict, user_ids)
+
+        # Train Data
+        reducer = FeatureLabelReducer(f_train_dict)
+        feature_names, x_train, y_train = reducer.get_x_y_data()
+
+        model = xgboost(x_train, y_train)
+        return model
 
     def actual_expected_plot(self, title: str, user_ids: list = None):
         if user_ids is not None and len(user_ids) == 1:
@@ -116,10 +129,71 @@ class LocalModel(BaseAnalysis):
         actual_expected_plt(predictions, y_test, f"Local Model | {DAYS_OF_DATA} Days | {title}")
 
 class WeightedEnsembleModel(BaseAnalysis):
-    def __init__(self):
-        pass
-    def actual_expected_plot(self, title: str, user_ids: list = None):
-        pass
+    """
+    Combines a user-specific local model with a global model using weighted predictions.
+    """
+    def __init__(self, train_df_dict: dict[str, pd.DataFrame], test_df_dict: dict[str, pd.DataFrame],
+                 local_weight: float = 0.5):
+        """
+        local_weight: float between 0 and 1, fraction of prediction from local model
+        """
+        self.train_df_dict = train_df_dict
+        self.test_df_dict = test_df_dict
+        self.local_weight = local_weight
+        self.global_weight = 1 - local_weight
+
+    def get_predicted_actual(self, user_ids: list = None) -> list[dict] | None:
+        if user_ids is None:
+            user_ids = self.train_df_dict["cgm"]["UserID"].unique()
+
+        # Train the global model once
+        global_model = GlobalModel(self.train_df_dict, self.test_df_dict).get_model()
+
+        all_predictions_actual: list[dict] = []
+
+        for user_id in user_ids:
+            # Get local model predictions
+            local_df_dict = self.train_df_dict.copy()
+            local_test_dict = self.test_df_dict.copy()
+            del local_df_dict["static_user"]
+            del local_test_dict["static_user"]
+
+            local_train, local_test = _get_user_filtered_df(local_df_dict, [user_id]), _get_user_filtered_df(local_test_dict, [user_id])
+            local_model = LocalModel(local_train, local_test)
+            local_predictions, y_test = local_model.get_prediction_test(user_id)
+
+            if len(local_predictions) == 0:
+                print(f"User {user_id} has insufficient data, skipping.")
+                continue
+
+            # Get global model predictions
+            reducer = FeatureLabelReducer(_get_user_filtered_df(self.test_df_dict, [user_id]))
+            _, x_test, y_test = reducer.get_x_y_data()
+            global_predictions = global_model.predict(x_test)
+
+            # Weighted ensemble
+            ensemble_predictions = self.local_weight * np.array(local_predictions) + self.global_weight * np.array(global_predictions)
+
+            all_predictions_actual.append({
+                "user_id": int(user_id),
+                "predictions": list(float(x) for x in ensemble_predictions),
+                "y_test": list(float(y) for y in y_test)
+            })
+
+        if len(all_predictions_actual) == 0:
+            print("No predictions available for selected users.")
+            return None
+        return all_predictions_actual
+
+def actual_expected_plot(title: str, local_weight: str, all_predictions_actual: list):
+    if all_predictions_actual is None:
+        raise ValueError("No predictions available for selected users.")
+
+    all_predictions, all_y_test = [], []
+    for entry in all_predictions_actual:
+        all_predictions.extend(entry["predictions"])
+        all_y_test.extend(entry["y_test"])
+    actual_expected_plt(all_predictions, all_y_test, f"Weighted Ensemble | {DAYS_OF_DATA} Days | {title}", out=f"figures/we_model_{local_weight}.png")
 
 if __name__ == "__main__":
     base_file_path = "../data/CGMacros/pickle/"
@@ -134,7 +208,7 @@ if __name__ == "__main__":
     # global_model.actual_expected_plot("T2DM", user_ids=CGMacro_USER_GROUPS["t2dm"])
     # global_model.actual_expected_plot("Single User", user_ids=[1])
     #
-    global_model.actual_expected_plot("ALL")
+    # global_model.actual_expected_plot("ALL")
 
     # LOCAL MODEL
     local_df_dict = df_dict.copy()
@@ -142,3 +216,26 @@ if __name__ == "__main__":
     local_train, local_test = get_train_test_df_dicts(local_df_dict)
     local_model = LocalModel(local_train, local_test)
     # local_model.actual_expected_plot("All Users")
+
+    # TODO: CHECK ALL CORRECT THIS IS INCORRECT, AS SAME R SCORE, MAKE SURE SAME TEST ARR
+
+    json_data = dict()
+
+    # for lw in np.linspace(0, 1, 30):
+    #     weighted_ensemble_model = WeightedEnsembleModel(train, test, local_weight=lw)
+    #     # weighted_ensemble_model.actual_expected_plot(f"Local Weight: {lw}")
+    #     data = weighted_ensemble_model.get_predicted_actual()
+    #     json_data[f"Local Weight {lw:.2f}"] = data
+    #
+    # print(json_data)
+    #
+    # with open('data/data.json', 'w') as json_file:
+    #     json.dump(json_data, json_file, indent=4)
+
+    with open('data/data.json', 'r') as file:
+        data = json.load(file)  # Parse JSON into a Python dictionary
+
+    # print(data)
+
+    actual_expected_plot("Tester", f"0", data["Local Weight 0.00"])
+

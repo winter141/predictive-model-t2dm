@@ -112,7 +112,9 @@ def actual_expected_plt(predictions, y_test, title, out=None):
 
     if out is not None:
         plt.savefig(out, bbox_inches='tight')
-    plt.show()
+    else:
+        plt.show()
+    plt.close()
 
 
 def get_new_preds(x: list, y: list, model_type: ModelType = ModelType.XGBOOST):

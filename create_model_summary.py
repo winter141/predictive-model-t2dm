@@ -95,7 +95,7 @@ def create_model_summary(
     output += "\n\nFor categorical features consider running a PDP plot with categorical_features parameter."
 
     print("Starting actual expected plt")
-    actual_expected_plt(preds, y_test, actual_expected_out)
+    # actual_expected_plt(preds, y_test, actual_expected_out)
 
     if out is None:
         print('_' * 50 + "\n" + output + '\n' + '_' * 50)
@@ -103,6 +103,7 @@ def create_model_summary(
         # Save output to out file
         with open(out, "w") as f:
             f.write(output)
+            print(output)
 
 
 if __name__ == "__main__":
@@ -110,13 +111,14 @@ if __name__ == "__main__":
     y = np.load("data/CGMacros/feature_label/y.npy", allow_pickle=True)
     feature_names = np.load("data/CGMacros/feature_label/feature_names.npy", allow_pickle=True)
 
-    title = "temporal_log_no_fiber_no_time_since_last_meal_no_bmi_no_self_identity_no_cgm"
+    title = "all_with_food_types"
     create_model_summary(x,
                          y,
                          feature_names,
                          out=f"results/CGMacros/model_summaries/{title}.md",
                          shap_out=f"results/CGMacros/SHAP_PDP/{title}_shap.png",
                          pdp_out=f"results/CGMacros/SHAP_PDP/{title}_pdp.png",
-                         actual_expected_out=f"results/CGMacros/SHAP_PDP/{title}_scatter.png"
+                         actual_expected_out=f"results/CGMacros/SHAP_PDP/{title}_scatter.png",
+                         r_iterations=10
                          )
     # create_model_summary(x, y, feature_names, r_iterations=1)

@@ -8,7 +8,7 @@ def open_data():
         return json.load(file)
 
 def plt_cartesian_product(data: list[dict]):
-    features = ["Su", "Fm", "Tg", "Tf", "Ft", "Ui"]
+    features = ["Su", "Fm", "Tg", "Tf", "Ui"]
 
     data = sorted(data, key=lambda x: -x["mean_R"])
 
@@ -22,8 +22,10 @@ def plt_cartesian_product(data: list[dict]):
                 ax.plot(j, i, 'o', markersize=5, markerfacecolor='white', markeredgecolor='gray', alpha=0.5)
         # Add R score at the end of the row
         ax.text(len(features) + 0.2, i, f"{row['mean_R']:.3f}", va='center')
-        ax.text(len(features) + 0.5, i, f"{row['std_R']:.3f}", va='center')
 
+    # Add headers for mean_R and std_R
+    ax.text(len(features) + 0.2, -0.5, "Mean R ", ha='left', va='bottom', fontweight='bold')
+    ax.grid(True, which='major', linestyle='--', alpha=0.4)
 
     ax.set_yticks(range(len(data)))
     ax.set_yticklabels([row['nickname'] for row in data])
@@ -35,6 +37,7 @@ def plt_cartesian_product(data: list[dict]):
     ax.set_xlim(-0.5, len(features) + 1)
     ax.set_xlabel("Features")
     ax.set_title("Feature Inclusion vs R Score")
+    # plt.savefig("figures/cartesian_product.png")
     plt.show()
 
 

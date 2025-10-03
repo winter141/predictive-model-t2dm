@@ -5,8 +5,16 @@ from matplotlib import pyplot as plt
 from scipy.stats import pearsonr
 from models import get_new_preds, ModelType, SHAP_analysis, split_train_test, xgboost, gradient_boosting, PDP_analysis, \
     actual_expected_plt
+from process_data.main import load_dataframe, FeatureLabelReducer
 
 R_ITERATIONS = 100
+
+CGMacro_USER_GROUPS = {
+    "healthy": [1,  2, 4, 6, 15, 17, 18, 19, 21, 27, 31, 32, 33, 34, 48],
+    "prediabetes": [7, 8,  9, 10, 11, 13, 16, 20, 22, 23, 26, 29, 41, 43, 44, 45],
+    "t2dm": [3, 5, 12, 14, 28, 30, 35, 36, 38, 39, 42, 46, 47, 49]
+}
+
 
 
 def plt_model_results(preds, y_test, model_name: str):
@@ -69,6 +77,7 @@ def create_model_summary(
 
     # Create model for shap/pdp analysis
     x_train, y_train, x_test, y_test = split_train_test(x, y)
+    print(f"X train: {len(x_train)}, X_test: {len(x_test)}")
     if model_type == ModelType.XGBOOST:
         model = xgboost(x_train, y_train)
     elif model_type == ModelType.GRADIENT_BOOSTING:
@@ -107,18 +116,35 @@ def create_model_summary(
 
 
 if __name__ == "__main__":
-    x = np.load("data/CGMacros/feature_label/x.npy", allow_pickle=True)
-    y = np.load("data/CGMacros/feature_label/y.npy", allow_pickle=True)
-    feature_names = np.load("data/CGMacros/feature_label/feature_names.npy", allow_pickle=True)
+    base_file_path = "data/CGMacros/pickle/"
+    df_dict = dict()
+    for pkl in ["cgm", "dynamic_user", "log", "static_user"]:
+        df_dict[pkl] = load_dataframe(base_file_path + pkl + ".pkl")
+    feature_groups = {
+        "static_user": ["Sex", "Body weight", "Height", "Self-identity"],
+        "static_user2": ["UserID"],
+        "log_macros": ["Energy", "Carbohydrate", "Protein", "Fat"],
+        # "log_food": ["Food Types"],
+        "temporal_cgm": ["cgm_p30", "cgm_p60", "cgm_p120"],
+        "temporal_food": ["meal_hour", "time_since_last_meal"]
+    }
+    for key in ["healthy", "prediabetes", "t2dm"]:
+        users = CGMacro_USER_GROUPS[key]
+        new_df_dict = df_dict.copy()
+        new_df_dict["cgm"] = new_df_dict["cgm"][new_df_dict["cgm"]["UserID"].isin(users)]
+        new_df_dict["log"] = new_df_dict["log"][new_df_dict["log"]["UserID"].isin(users)]
+        new_df_dict["dynamic_user"] = new_df_dict["dynamic_user"][new_df_dict["dynamic_user"]["UserID"].isin(users)]
+        new_df_dict["static_user"] = new_df_dict["static_user"][new_df_dict["static_user"]["UserID"].isin(users)]
 
-    title = "all_with_food_types"
-    create_model_summary(x,
-                         y,
-                         feature_names,
-                         out=f"results/CGMacros/model_summaries/{title}.md",
-                         shap_out=f"results/CGMacros/SHAP_PDP/{title}_shap.png",
-                         pdp_out=f"results/CGMacros/SHAP_PDP/{title}_pdp.png",
-                         actual_expected_out=f"results/CGMacros/SHAP_PDP/{title}_scatter.png",
-                         r_iterations=10
-                         )
+        reducer = FeatureLabelReducer(new_df_dict, feature_groups)
+        feature_names, x, y = reducer.get_x_y_data()
+        title = f"SuUiFmTgTf_{key}"
+        create_model_summary(x,
+                             y,
+                             feature_names,
+                             out=f"results/CGMacros/model_summaries/{title}.md",
+                             # shap_out=f"results/CGMacros/SHAP_PDP/{title}_shap.png",
+                             # pdp_out=f"results/CGMacros/SHAP_PDP/{title}_pdp.png",
+                             # actual_expected_out=f"results/CGMacros/SHAP_PDP/{title}_scatter.png",
+                             )
     # create_model_summary(x, y, feature_names, r_iterations=1)

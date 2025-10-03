@@ -17,7 +17,7 @@ if __name__ == "__main__":
         "static_user": ["Sex", "Body weight", "Height", "Self-identity"],
         "static_user2": ["UserID"],
         "log_macros": ["Energy", "Carbohydrate", "Protein", "Fat"],
-        "log_food": ["Food Types"],
+        # "log_food": ["Food Types"],
         "temporal_cgm": ["cgm_p30", "cgm_p60", "cgm_p120"],
         "temporal_food": ["meal_hour", "time_since_last_meal"]
     }
@@ -28,7 +28,7 @@ if __name__ == "__main__":
         "log_macros": "Fm",
         "temporal_cgm": "Tg",
         "temporal_food": "Tf",
-        "log_food": "Ft"
+        # "log_food": "Ft"
     }
 
     # Get all combinations of inclusion (True/False)

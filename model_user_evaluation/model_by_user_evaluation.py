@@ -12,7 +12,7 @@ CGMacro_USER_GROUPS = {
 
 # Open and read the JSON file
 with open('data/data.json', 'r') as file:
-    data = json.load(file)  # Parse JSON into a Python dictionary
+    data = json.load(file)
 
 
 all_dict = dict()

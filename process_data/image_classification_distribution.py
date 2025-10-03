@@ -2,6 +2,7 @@ import pandas as pd
 import glob
 import os
 import matplotlib.pyplot as plt
+import numpy as np
 
 folder_path = "image_classification"
 csv_files = glob.glob(os.path.join(folder_path, "*.csv"))
@@ -19,6 +20,9 @@ for csv_file in csv_files:
 # Calculate percentage above threshold
 threshold = 0.6
 above_threshold = [s for s in all_scores if s > threshold]
+
+print(np.mean(all_scores))
+print(np.std(all_scores))
 percent_above = len(above_threshold) / len(all_scores) * 100 if all_scores else 0
 
 # Plot histogram

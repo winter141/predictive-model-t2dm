@@ -211,7 +211,7 @@ class FeatureLabelReducer:
             x_labels_dict = X_LABELS
 
         self.static_user_df = None if "static_user" not in df_dict else df_dict["static_user"]
-        self.log_df = df_dict["log"]
+        self.log_df = df_dict["log"].copy()
         self.cgm_df = df_dict["cgm"].copy()
         self.dynamic_user_df = None if "dynamic_user" not in df_dict else df_dict["dynamic_user"]
         self.x_labels = x_labels_dict
@@ -250,7 +250,6 @@ class FeatureLabelReducer:
             self.full_df = self.log_df.copy()
 
         self.full_df["auc"] = self.full_df.apply(lambda row: self.reduce_cgm_window_to_area(row, 2), axis=1)
-
 
         # Add temporal (engineered) features
         self.full_df["meal_hour"] = self.full_df['Timestamp'].dt.hour
@@ -324,27 +323,45 @@ class FeatureLabelReducer:
 
     def get_x_y_data(self, y_label=Y_LABEL, users: list = None):
         reduced: pandas.DataFrame = self.join_all()
-
         reduced = reduced[reduced[y_label].notna()]  # drop rows where auc is nan
-
 
         if users is not None:
             reduced = reduced[reduced["UserID"].isin(users)]
 
-
         feature_names = get_feature_names(self.x_labels, include_static_user=self.static_user_df is not None)
 
         x_df = reduced[feature_names]
-
         x_df = pd.get_dummies(x_df)
-
 
         x_values = x_df.values
         feature_names = x_df.columns
 
         y_values = reduced[y_label].values
 
+
         return feature_names, x_values, y_values
+
+def get_x_y_from_features(TrainFeatureLabelReducer: FeatureLabelReducer,
+                          TestFeatureLabelReducer: FeatureLabelReducer):
+    features, _, _ = TrainFeatureLabelReducer.get_x_y_data()
+    test_df = TestFeatureLabelReducer.join_all()
+    test_df = test_df[test_df[Y_LABEL].notna()]  # drop rows with nan target
+    y_values = test_df[Y_LABEL].values  # auc
+
+    # 3. Select raw columns used for training
+    raw_features = get_feature_names(TestFeatureLabelReducer.x_labels,
+                                     include_static_user=TestFeatureLabelReducer.static_user_df is not None)
+    x_df = test_df[raw_features]
+
+    # 4. Apply one-hot encoding
+    x_df = pd.get_dummies(x_df)
+
+    # 5. Align test columns to training columns
+    x_df = x_df.reindex(columns=features, fill_value=0)
+
+    # 6. Extract X and y
+    x_values = x_df.values
+    return x_values, y_values
 
 
 if __name__ == "__main__":
